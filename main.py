@@ -20,6 +20,11 @@ from matplotlib import pyplot
 import matplotlib.animation as animation
 import skvideo.io
 import numpy as np
+from pathlib import Path
+from numpy import load
+import skvideo.io
+from skimage.io import imsave
+import numpy as np
 
 # define the standalone discriminator model
 def define_discriminator(in_shape=(64,64,1)):
@@ -114,12 +119,13 @@ def generate_fake_samples(g_model, latent_dim, n_samples):
  return X, y
  
 # create and save a plot of generated images (reversed grayscale)
-def save_plot(examples, epoch, n=3, name='gan'):
+def save_plot(examples, epoch, n=3, save_path=None, name='gan'):
+  if save_path is None:
+    save_path = Path.cwd()
   #each seqeunce
   for i in range(20):
-    filename = 'output/{}/moving_plot_e{0:03}_v{0:02}.mp4'.format(name, (epoch+1), i)
-    writer = skvideo.io.FFmpegWriter(filename)
-    # plot images
+    video_path = save_path / 'moving_plot_e{0:03}_v{0:02}.mp4'.format((epoch+1), i)
+    writer = skvideo.io.FFmpegWriter(str(video_path))
     for j in range(n * n):
       # define subplot
       # pyplot.subplot(n, n, 1 + j)
@@ -139,6 +145,7 @@ def save_plot(examples, epoch, n=3, name='gan'):
 
 # evaluate the discriminator, plot generated images, save generator model
 def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_samples=10, name='gan'):
+  output_path = Path.mkdir(parents=True, exist_ok=True, path='output/{}'.format(name))
   # prepare real samples
   X_real, y_real = generate_real_samples(dataset, n_samples)
   # reshape sequences to all frames
@@ -158,8 +165,8 @@ def summarize_performance(epoch, g_model, d_model, dataset, latent_dim, n_sample
   # save plot
   save_plot(X_fake, epoch, name)
   # save the generator model tile file
-  filename = 'output/{}/moving_model_{0:03}.h5'.format(name, epoch + 1)
-  g_model.save(filename)
+  model_path = output_path / 'moving_model_{0:03}.h5'.format(epoch + 1)
+  g_model.save(str(model_path))
  
 # train the generator and discriminator
 def train(g_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batch=256, name='gan'):
