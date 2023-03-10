@@ -25,6 +25,41 @@ from numpy import load
 import skvideo.io
 from skimage.io import imsave
 import numpy as np
+from tensorflow.keras import backend as K
+from tensorflow.math import divide_no_nan, reduce_std
+
+class RatioLoss(object):
+  def __init__(self):
+    self.previous_y_pred = None
+    self.previous_y_true = None
+
+  def __call__(self, y_true, y_pred, sample_weight=None):
+    if self.previous_y_pred is None:
+      self.previous_y_pred = y_pred
+      self.previous_y_true = y_true
+      return 0
+
+    # ratio
+    ratio_pred = divide_no_nan(
+        y_pred, self.previous_y_pred
+    )
+    ratio_true = divide_no_nan(
+        y_true, self.previous_y_true
+    )
+
+    #std
+    std_pred = reduce_std(ratio_pred, axis=None)
+    std_true = reduce_std(ratio_true, axis=None)
+
+    
+
+    #diff
+    diff_std = std_true - std_pred
+
+    # update previous values
+    self.previous_y_pred = y_pred
+    self.previous_y_true = y_true
+    return diff_std
 
 # define the standalone discriminator model
 def define_discriminator(in_shape=(64,64,1)):
@@ -201,17 +236,40 @@ def train(g_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batc
   summarize_performance(i, g_model, d_model, dataset, latent_dim, name)
 
 
-if __name__ == "__main__":
-    # size of the latent space
-    latent_dim = 100
-    # create the discriminator
-    d_model = define_discriminator()
-    # create the generator
-    g_model = define_generator(latent_dim)
-    # create the gan
-    gan_model = define_gan(g_model, d_model)
+def vanilla_gan():
+  # size of the latent space
+  latent_dim = 100
+  # create the discriminator
+  d_model = define_discriminator()
+  # create the generator
+  g_model = define_generator(latent_dim)
+  # create the gan
+  gan_model = define_gan(g_model, d_model)
+  # load image data
+  dataset = load_real_samples()
+  # train model
+  train(g_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batch=100, name='vanilla_gan')
 
-    # load image data
-    dataset = load_real_samples()
-    # train model
-    train(g_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batch=100, name='vanilla_gan')
+
+def test_loss():
+  dataset = load_real_samples()
+  # 20, 10000, 64, 64, 1
+  first = dataset[0, 0, :, :, 0]
+  second = dataset[0, 1, :, :, 0]
+  third = dataset[0, 2, :, :, 0]
+  fourth = dataset[0, 3, :, :, 0]
+  loss = RatioLoss()
+  print(loss(first, second))
+  print(loss(second, third))
+  print(loss(third, fourth))
+  print(loss(first, second))
+  print(loss(fourth, fourth))
+  print(loss(first, second))
+  print(loss(fourth, fourth))
+  print(loss(fourth, fourth))
+  print(loss(fourth, fourth))
+
+
+if __name__ == "__main__":
+    # vanilla_gan()
+    test_loss()
