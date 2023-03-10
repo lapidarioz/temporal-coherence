@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y \
         libgstreamer1.0 \
         libgstreamer1.0-dev \
         libgstreamer-plugins-base1.0-0 \
-        libgstreamer-plugins-base1.0-dev
+        libgstreamer-plugins-base1.0-dev \
+        git
 
 USER root
 
