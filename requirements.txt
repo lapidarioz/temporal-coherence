@@ -1,0 +1,4 @@
+scikit-video
+matplotlib
+scikit-image
+scikit-learn
