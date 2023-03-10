@@ -26,10 +26,17 @@ import skvideo.io
 from skimage.io import imsave
 import numpy as np
 from tensorflow.keras import backend as K
-from tensorflow.math import divide_no_nan, reduce_std
+from tensorflow.math import divide_no_nan, reduce_std, reduce_mean, square
+from tensorflow import concat
+
+def concat_last_sample(y, previous_y):
+  last_sample = previous_y[-1]
+  last_sample_reshaped = last_sample.reshape(1,last_sample.shape[0],last_sample.shape[1],1)
+  return concat([last_sample_reshaped, y[0:-1]], axis=0)
 
 class RatioLoss(object):
   def __init__(self):
+    super().__init__()
     self.previous_y_pred = None
     self.previous_y_true = None
 
@@ -37,21 +44,25 @@ class RatioLoss(object):
     if self.previous_y_pred is None:
       self.previous_y_pred = y_pred
       self.previous_y_true = y_true
-      return 0
-
+    
+    print('y_true')
+    print(y_true.shape)
+    print('y_pred')
+    print(y_pred.shape)
+    print('concat_last_sample')
+    print(concat_last_sample(y_pred, self.previous_y_pred).shape)
+    quit()
     # ratio
     ratio_pred = divide_no_nan(
-        y_pred, self.previous_y_pred
+        y_pred, concat_last_sample(y_pred, self.previous_y_pred)
     )
     ratio_true = divide_no_nan(
-        y_true, self.previous_y_true
+        y_true, concat_last_sample(y_true, self.previous_y_true)
     )
 
     #std
-    std_pred = reduce_std(ratio_pred, axis=None)
-    std_true = reduce_std(ratio_true, axis=None)
-
-    
+    std_pred = reduce_std(ratio_pred, axis=-1)
+    std_true = reduce_std(ratio_true, axis=-1)
 
     #diff
     diff_std = std_true - std_pred
@@ -95,19 +106,23 @@ def define_generator(latent_dim):
  return model
  
 # define the combined generator and discriminator model, for updating the generator
-def define_gan(g_model, d_model):
- # make weights in the discriminator not trainable
- d_model.trainable = False
- # connect them
- model = Sequential()
- # add generator
- model.add(g_model)
- # add the discriminator
- model.add(d_model)
- # compile model
- opt = Adam(lr=0.0002, beta_1=0.5)
- model.compile(loss='binary_crossentropy', optimizer=opt)
- return model
+def define_gan(g_model, d_model, loss=None):
+  # make weights in the discriminator not trainable
+  d_model.trainable = False
+  # connect them
+  model = Sequential()
+  # add generator
+  model.add(g_model)
+  # add the discriminator
+  model.add(d_model)
+  # compile model
+  opt = Adam(lr=0.0002, beta_1=0.5)
+  if loss is None:
+    total_loss='binary_crossentropy'
+  else:
+    total_loss = loss
+  model.compile(loss=total_loss, optimizer=opt)
+  return model
  
 # load and prepare mnist training images
 def load_real_samples():
@@ -250,26 +265,43 @@ def vanilla_gan():
   # train model
   train(g_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batch=100, name='vanilla_gan')
 
+def ratio_gan():
+  # size of the latent space
+  latent_dim = 100
+  # create the discriminator
+  d_model = define_discriminator()
+  # create the generator
+  g_model = define_generator(latent_dim)
+  # create the gan
+  ratio_loss = RatioLoss()
+  gan_model = define_gan(g_model, d_model, loss=ratio_loss)
+  # load image data
+  dataset = load_real_samples()
+  # train model
+  train(g_model, d_model, gan_model, dataset, latent_dim, n_epochs=100, n_batch=100, name='vanilla_gan')
 
 def test_loss():
   dataset = load_real_samples()
   # 20, 10000, 64, 64, 1
-  first = dataset[0, 0, :, :, 0]
-  second = dataset[0, 1, :, :, 0]
-  third = dataset[0, 2, :, :, 0]
-  fourth = dataset[0, 3, :, :, 0]
-  loss = RatioLoss()
-  print(loss(first, second))
-  print(loss(second, third))
-  print(loss(third, fourth))
-  print(loss(first, second))
-  print(loss(fourth, fourth))
-  print(loss(first, second))
-  print(loss(fourth, fourth))
-  print(loss(fourth, fourth))
-  print(loss(fourth, fourth))
+  first = dataset[0, 0:4, :, :, 0].reshape(4, 64, 64, 1)
+  second = dataset[0, 4:8, :, :, 0].reshape(4, 64, 64, 1)
+  third = dataset[0, 8:12, :, :, 0].reshape(4, 64, 64, 1)
+  fourth = dataset[0, 12:16, :, :, 0].reshape(4, 64, 64, 1)
+  ratio_loss = RatioLoss()
+  print(first.shape)
+  print(ratio_loss(first, second))
+  print(ratio_loss(second, third))
+  print(ratio_loss(third, fourth))
+  print(ratio_loss(first, second))
+  print(ratio_loss(fourth, fourth))
+  print(ratio_loss(first, second))
+  print(ratio_loss(fourth, fourth))
+  print(ratio_loss(fourth, fourth))
+  print(ratio_loss(fourth, fourth))
+  print(ratio_loss(fourth, fourth).shape)
 
 
 if __name__ == "__main__":
     # vanilla_gan()
-    test_loss()
+    # test_loss()
+    ratio_gan()
