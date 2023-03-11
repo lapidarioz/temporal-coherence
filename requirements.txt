@@ -1,6 +1,8 @@
+jupyterlab
 scikit-video
 matplotlib
 scikit-image
 scikit-learn
 imageio
 git+https://github.com/tensorflow/docs
+pydot

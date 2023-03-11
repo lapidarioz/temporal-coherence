@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:latest-gpu
+FROM tensorflow/tensorflow:latest-gpu-jupyter
 
 # Adapted from https://github.com/d1egoprog/docker-tensorflow-gpu-jupyter/blob/main/tensorflow-gpu-jupyter/Dockerfile
 
@@ -9,29 +9,30 @@ RUN apt-get update && apt-get install -y \
         libgstreamer1.0-dev \
         libgstreamer-plugins-base1.0-0 \
         libgstreamer-plugins-base1.0-dev \
-        git
+        git \
+        graphviz
 
-USER root
+# USER root
 
-RUN adduser jupyter
+# RUN adduser jupyter
 
-USER jupyter
+# USER jupyter
 
-ENV PORT 8888
+# ENV PORT 8888
 
-ENV PATH="${PATH}:/home/jupyter/.local/bin"
+# ENV PATH="${PATH}:/home/jupyter/.local/bin"
 
 WORKDIR /home/jupyter
 
 RUN python3 -m pip install --no-cache --upgrade setuptools pip
 
-RUN pip install jupyter && pip install jupyterlab
+# RUN pip install jupyter && pip install jupyterlab
 
 COPY requirements.txt /home/jupyter/
 
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-EXPOSE $PORT
+# EXPOSE $PORT
 
 ENTRYPOINT ["jupyter", "lab","--ip=0.0.0.0","--allow-root"]
