@@ -8,3 +8,4 @@ git+https://github.com/tensorflow/docs
 pydot
 tqdm
 ipywidgets
+opencv-python
