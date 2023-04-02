@@ -9,3 +9,4 @@ pydot
 tqdm
 ipywidgets
 opencv-python
+matplotlib
