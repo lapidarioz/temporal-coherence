@@ -10,3 +10,4 @@ tqdm
 ipywidgets
 opencv-python
 matplotlib
+tensorflow-io
