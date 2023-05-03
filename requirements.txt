@@ -8,9 +8,6 @@ git+https://github.com/tensorflow/docs
 pydot
 tqdm
 ipywidgets
-opencv-python
-matplotlib
 tensorflow-io
 tensorflow-addons
-mediapipe
-msvc-runtime
+joblib

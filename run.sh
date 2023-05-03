@@ -2,7 +2,7 @@
 
 # docker build -t temporal .
 
-nvidia-docker run -it \
+nvidia-docker run -u $(id -u):$(id -g) -it \
     --env LICENSE=yes \
     -p 8888:8888 \
     -v $PWD:/home/jupyter/app \
