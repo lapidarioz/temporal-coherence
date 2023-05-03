@@ -2,9 +2,9 @@
 
 # docker build -t temporal .
 
-nvidia-docker run -u $(id -u):$(id -g) -it \
+nvidia-docker run -it \
     --env LICENSE=yes \
-    -p 8888:8888 \
+    -p 5555:5555 \
     -v $PWD:/home/jupyter/app \
     -v /home/rafa/data:/home/jupyter/data \
     temporal
