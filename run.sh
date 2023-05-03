@@ -2,9 +2,14 @@
 
 # docker build -t temporal .
 
+PARENTDIR="$(dirname "$PWD")"
+
 nvidia-docker run -it \
     --env LICENSE=yes \
     -p 5555:5555 \
     -v $PWD:/home/jupyter/app \
-    -v /home/rafa/data:/home/jupyter/data \
+    -v $PARENTDIR/data:/home/jupyter/data \
     temporal
+
+sudo chown -R $USER:$USER $PARENTDIR/data
+sudo chown -R $USER:$USER $PWD
