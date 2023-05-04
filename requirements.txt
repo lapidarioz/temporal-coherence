@@ -16,6 +16,7 @@ torchvision
 torchaudio
 opencv-python
 mediapipe
-opencv-contrib-python 
+opencv-contrib-python
+face_recognition
 git+https://github.com/andresprados/SPIGA.git
 git+https://github.com/FacePerceiver/facer.git@main
