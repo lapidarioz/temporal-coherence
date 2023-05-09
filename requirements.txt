@@ -1,22 +1,21 @@
-jupyterlab
-scikit-video
 matplotlib
-scikit-image
-scikit-learn
-imageio
-git+https://github.com/tensorflow/docs
 pydot
 tqdm
 ipywidgets
 tensorflow-io
 tensorflow-addons
+git+https://github.com/tensorflow/docs
 joblib
-torch
-torchvision
-torchaudio
 opencv-python
-mediapipe
 opencv-contrib-python
-face_recognition
-git+https://github.com/andresprados/SPIGA.git
-git+https://github.com/FacePerceiver/facer.git@main
+# scikit-video
+# scikit-image
+# scikit-learn
+# jupyterlab
+# face_recognition
+# torch
+# torchvision
+# torchaudio
+# mediapipe
+# git+https://github.com/andresprados/SPIGA.git
+# git+https://github.com/FacePerceiver/facer.git@main

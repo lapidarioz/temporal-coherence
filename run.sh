@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# docker build -t temporal .
+# docker build -f Dockerfile.dlib -t temporal .
 
 PARENTDIR="$(dirname "$PWD")"
 
