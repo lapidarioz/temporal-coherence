@@ -4,6 +4,7 @@ tqdm
 ipywidgets
 tensorflow-io
 tensorflow-addons
+tensorflow-probability
 git+https://github.com/tensorflow/docs
 joblib
 opencv-python
@@ -16,6 +17,6 @@ opencv-contrib-python
 # torch
 # torchvision
 # torchaudio
-# mediapipe
+mediapipe
 # git+https://github.com/andresprados/SPIGA.git
 # git+https://github.com/FacePerceiver/facer.git@main
