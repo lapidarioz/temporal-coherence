@@ -24,5 +24,5 @@ nvidia-docker run -it \
 #     -v /home/jupyter/app \
 #     temporal
 
-# sudo chown -R $USER:$USER $PARENTDIR/data
-# sudo chown -R $USER:$USER $PWD
+sudo chown -R $USER:$USER $PARENTDIR/data
+sudo chown -R $USER:$USER $PWD
