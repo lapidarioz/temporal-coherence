@@ -24,5 +24,6 @@ nvidia-docker run -it \
 #     -v /home/jupyter/app \
 #     temporal
 
+# TODO: see how to use udi mapping with vscode
 sudo chown -R $USER:$USER $PARENTDIR/data
 sudo chown -R $USER:$USER $PWD

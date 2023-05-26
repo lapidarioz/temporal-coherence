@@ -5,10 +5,12 @@ ipywidgets
 tensorflow-io
 tensorflow-addons
 tensorflow-probability
-git+https://github.com/tensorflow/docs
+tensorflow-gan
+tensorflow-hub
 joblib
 opencv-python
 opencv-contrib-python
+pandas
 # scikit-video
 # scikit-image
 # scikit-learn
