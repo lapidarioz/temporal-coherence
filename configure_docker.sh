@@ -20,8 +20,7 @@ services:
       - $PWD:/home/jupyter/app
       - $HOME/.vscode-server:/.vscode-server
     ports:
-      - 5555:5555
-    user: $(id -u):$(id -g)" > $PWD/docker-compose.yml
+      - 5555:5555" > $PWD/docker-compose.yml
 
 
 docker compose build
