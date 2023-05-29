@@ -18,7 +18,7 @@ services:
     volumes:
       - $PARENTDIR/data:/home/jupyter/data
       - $PWD:/home/jupyter/app
-      - $HOME/.vscode-server:/root/.vscode-server
+      - $HOME/.vscode-server-tensorflow:/root/.vscode-server
     ports:
       - 5555:5555" > $PWD/docker-compose.yml
 
