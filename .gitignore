@@ -4,3 +4,4 @@ logs
 __pycache__
 training_checkpoints
 .vscode
+docker-compose.yml
