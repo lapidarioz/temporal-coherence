@@ -192,7 +192,94 @@ class FrameDataGenerator():
                 self._restart()
 
 
+class PreprocessedFrameDataGenerator(FrameDataGenerator):
 
+    def __init__(self, videos_path, batch_size=1):
+        super().__init__(videos_path, batch_size)
+        self.landmark_detector = LandmarkDetector(batch_size)
+    
+    def _load_current_video(self):
+        super()._load_current_video()
+        self._deformed_frame = self.current_video[0] # first frame as input
+        self._current_source_video = self.current_video # TODO: change this to the most similar video
+        self._current_landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self.current_video)
+        self._current_source_landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self._current_source_video)
+        self._deformed_landmarks = self._current_landmarks[0]
+    
+    def _load_next_video(self):
+        super()._load_next_video()
+        self.height = self.current_video.shape[1]
+        self.width = self.current_video.shape[2]
+    
+     def _current_landmarks(self):
+        return self._current_landmarks[self.current_frame_index]
+    
+    def _next_landmarks(self):
+        return self._current_landmarks[self.current_frame_index+1]
+    
+    def _previous_landmarks(self):
+        return self._current_landmarks[self.current_frame_index-1]
+
+    def _deform_current_frame(self): # TODO: put in next the change of _deformed_landmarks and _deformed_frame
+        self._deformed_frame, self._deformed_landmarks = deform(
+            self._deformed_frame,
+            self._deformed_landmarks,
+            self._current_source_landmarks[self.current_frame_index-1],
+            self._current_source_landmarks[self.current_frame_index]
+        )
+    
+    def _get_displacements(self):
+        return compute_displacements_interpolation(
+            self._current_source_landmarks[self.current_frame_index-1],
+            self._current_source_landmarks[self.current_frame_index],
+            self.width,
+            self.height,
+            1)
+
+    def _get_current_frames(self):
+        deformed_frame = self._deformed_frame 
+        self._deform_current_frame() # TODO: put in next
+        return (
+            self._previous_frame(),
+            self._current_frame(),
+            self._next_frame(),
+            deformed_frame,
+            self._get_displacements(),
+            self._previous_landmarks,
+            self._current_landmarks,
+            self._next_landmarks
+        )
+
+    def _get_batch(self):
+        batch_previous_frame = []
+        batch_current_frame = []
+        batch_next_frame = []
+        batch_deformed_frame = []
+        batch_displacements = []
+        batch_previous_landmarks = []
+        batch_current_landmarks = []
+        batch_next_landmarks = []
+        for i in range(self.batch_size):
+            previous_frame,current_frame, next_frame = self._get_next_frames()
+            batch_previous_frame.append(previous_frame)
+            batch_current_frame.append(current_frame)
+            batch_next_frame.append(next_frame)
+            batch_deformed_frame.append(self._deformed_frame)
+            batch_displacements.append(self._get_displacements())
+            batch_previous_landmarks.append(self._previous_landmarks)
+            batch_current_landmarks.append(self._current_landmarks)
+            batch_next_landmarks.append(self._next_landmarks)
+        return (
+            np.array(batch_previous_frame),
+            np.array(batch_current_frame),
+            np.array(batch_next_frame),
+            np.array(batch_deformed_frame),
+            np.array(batch_displacements),
+            np.array(batch_previous_landmarks),
+            np.array(batch_current_landmarks),
+            np.array(batch_next_landmarks)
+        )
+    
 def downsample(filters, size, strides=2, apply_batchnorm=True):
   initializer = tf.random_normal_initializer(0., 0.02)
 
@@ -853,37 +940,24 @@ def warp_triangle(img1, img2, t1, t2):
         img2[r2[1]:r2[1] + r2[3], r2[0]:r2[0] + r2[2]] = img2[r2[1]:r2[1] + r2[3], r2[0]:r2[0] + r2[2]] + img2_rect
 
 
-def warp_all(source_image, source_triangles, target_triangles):
-    source_image_warped = source_image.numpy().copy()
+def warp_all(input_image, input_triangles, new_triangles):
+    input_image_warped = input_image.numpy().copy()
 
-    for tri_source, tri_target in zip(source_triangles,
-                                      target_triangles):
-        warp_triangle(source_image, source_image_warped, tri_source, tri_target)
+    for current_ipunt_triangle, current_new_triangle in zip(input_triangles,new_triangles):
+        warp_triangle(input_image, input_image_warped, current_ipunt_triangle, current_new_triangle)
 
-    return source_image_warped
+    return input_image_warped
 
 def get_new_landmarks(source_landmarks_previous, source_landmarks_current, target_landmarks_current):
     return tf.add(tf.subtract(source_landmarks_current, source_landmarks_previous), target_landmarks_current)
 
 
-def deform(target_sequence, source_sequence, landmark_detector):
+def deform(input_image, input_landmarks, previous_source_landmarks, current_source_landmarks):
     default_triangulation = get_default_triangulation()
-    target_landmarks = landmark_detector.preprocess_and_detect_landmarks(target_sequence)
-    source_landmarks = landmark_detector.preprocess_and_detect_landmarks(source_sequence)
-    warpped_sequence = [target_sequence[0]]
-    for i in range(1, len(target_sequence)):
-        target_image = normalized_sequence_to_images(target_sequence[i])
-        target_landmarks = target_sequence[i]
-        source_landmarks = source_sequence[i]
-        previous_source_landmarks = source_sequence[i-1]
-
-        target_triangles = target_landmarks[default_triangulation]
-        new_landmarks = get_new_landmarks(previous_source_landmarks, source_landmarks, target_landmarks)
-        new_triangles = new_landmarks[default_triangulation]
-
-        warped_image = warp_all(target_image, new_triangles, target_triangles)
-        warpped_sequence.append(warped_image)
-    return tf.stack(warpped_sequence)
+    input_triangles = input_landmarks[default_triangulation]
+    new_landmarks = get_new_landmarks(previous_source_landmarks, current_source_landmarks, input_landmarks)
+    new_triangles = new_landmarks[default_triangulation]
+    return warp_all(input_image, input_triangles, new_triangles), new_landmarks
 
 class DiscriminatorLoss():
 
