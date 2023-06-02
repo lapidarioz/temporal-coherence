@@ -226,7 +226,7 @@ def upsample(filters, size, strides=2, apply_dropout=False):
   return result
 
 
-def Discriminator(img_width, img_height, n_channels):
+def get_discriminator_model(img_width, img_height, n_channels):
   initializer = tf.random_normal_initializer(0., 0.02)
 
   inp = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], name='current_frame')
@@ -255,7 +255,7 @@ def Discriminator(img_width, img_height, n_channels):
   return tf.keras.Model(inputs=[inp, tar], outputs=last)
 
 
-def Generator(img_width, img_height, n_channels):
+def get_generator_model(img_width, img_height, n_channels):
     previous = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], dtype=tf.float64, name='previous_frame')
     # warped = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], dtype=tf.float64, name='warped_frame')
     # neutral = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], dtype=tf.float64, name='neutral_frame')
@@ -291,15 +291,15 @@ def Generator(img_width, img_height, n_channels):
     # Downsampling through the model
     skips = []
     for down in down_stack:
-    x = down(x)
-    skips.append(x)
+        x = down(x)
+        skips.append(x)
 
     skips = reversed(skips[:-1])
 
     # Upsampling and establishing the skip connections
     for up, skip in zip(up_stack, skips):
-    x = up(x)
-    x = tf.keras.layers.Concatenate()([x, skip])
+        x = up(x)
+        x = tf.keras.layers.Concatenate()([x, skip])
 
     x = last(x)
 
@@ -383,7 +383,8 @@ def get_default_landmarks():
         [0.51168627, 0.7092654 ],
         [0.49262676, 0.7093172 ]], dtype=np.float32)
     landmarks = landmarks + tf.random.uniform(landmarks.shape, -0.1, 0.1)
-    return np.moveaxis(landmarks, 0, 1)
+    # return np.moveaxis(landmarks, 0, 1)
+    return landmarks
 
 class LandmarkDetector():
 
@@ -758,7 +759,7 @@ def coherence_mean_landmarks_loss(previous_y_true_landmarks, y_true_landmarks, p
 class GeneratorLoss(object):
 
     def __init__(self,
-                landmarks_detector,
+                landmark_detector,
                 main_loss_function,
                 lambda_main_loss=1,
                 coherence_loss_function=None,
@@ -776,7 +777,7 @@ class GeneratorLoss(object):
         self.landmarks_coherence_loss_function = landmarks_coherence_loss_function
         self.lambda_landmarks_coherence_loss = lambda_landmarks_coherence_loss
         self.cross_entropy_loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-        self.landmarks_detector = landmarks_detector
+        self.landmark_detector = landmark_detector
 
     def __call__(self, disc_generated_output, previous_gen, current_gen, previous_target, current_target):
         gan_loss = self.cross_entropy_loss(tf.ones_like(disc_generated_output), disc_generated_output)
@@ -796,13 +797,13 @@ class GeneratorLoss(object):
 
         if self.landmarks_loss_function or self.landmarks_coherence_loss_function:
             # TODO: compute landmarks only once per image
-            current_target_landmarks = self.landmarks_detector.preprocess_and_detect_landmarks(current_target)[0] # TODO: fix to work with batch > 1
-            current_gen_landmarks = self.landmarks_detector.preprocess_and_detect_landmarks(current_gen)[0] # TODO: fix to work with batch > 1
+            current_target_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(current_target)[0] # TODO: fix to work with batch > 1
+            current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(current_gen)[0] # TODO: fix to work with batch > 1
             if self.lambda_landmarks_loss:
                 landmarks_loss = mean_loss(current_target_landmarks, current_gen_landmarks, self.landmarks_loss_function) * self.lambda_landmarks_loss
             if self.landmarks_coherence_loss_function:
-                previous_target_landmarks = self.landmarks_detector.preprocess_and_detect_landmarks(previous_target)[0] # TODO: fix to work with batch > 1
-                previous_gen_landmarks = self.landmarks_detector.preprocess_and_detect_landmarks(previous_gen)[0] # TODO: fix to work with batch > 1
+                previous_target_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_target)[0] # TODO: fix to work with batch > 1
+                previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_gen)[0] # TODO: fix to work with batch > 1
                 landmarks_coherence_loss = coherence_mean_landmarks_loss(previous_target_landmarks, current_target_landmarks, previous_gen_landmarks, current_gen_landmarks, self.landmarks_coherence_loss_function) * self.lambda_landmarks_coherence_loss
 
         total_gen_loss = gan_loss + main_loss + coherence_loss + landmarks_loss
@@ -866,10 +867,10 @@ def get_new_landmarks(source_landmarks_previous, source_landmarks_current, targe
     return tf.add(tf.subtract(source_landmarks_current, source_landmarks_previous), target_landmarks_current)
 
 
-def deform(target_sequence, source_sequence, landmarks_detector):
+def deform(target_sequence, source_sequence, landmark_detector):
     default_triangulation = get_default_triangulation()
-    target_landmarks = landmarks_detector.preprocess_and_detect_landmarks(target_sequence)
-    source_landmarks = landmarks_detector.preprocess_and_detect_landmarks(source_sequence)
+    target_landmarks = landmark_detector.preprocess_and_detect_landmarks(target_sequence)
+    source_landmarks = landmark_detector.preprocess_and_detect_landmarks(source_sequence)
     warpped_sequence = [target_sequence[0]]
     for i in range(1, len(target_sequence)):
         target_image = normalized_sequence_to_images(target_sequence[i])
