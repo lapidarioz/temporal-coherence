@@ -383,8 +383,7 @@ def get_default_landmarks():
         [0.51168627, 0.7092654 ],
         [0.49262676, 0.7093172 ]], dtype=np.float32)
     landmarks = landmarks + tf.random.uniform(landmarks.shape, -0.1, 0.1)
-    # return np.moveaxis(landmarks, 0, 1)
-    return landmarks
+    return np.moveaxis(landmarks, 0, 1)
 
 class LandmarkDetector():
 
@@ -405,8 +404,7 @@ class LandmarkDetector():
     def preprocess_and_detect_landmarks(self, images):
         results = tf.numpy_function(self.preprocess_and_detect_landmarks_numpy, [images], Tout=[tf.float32])
         results = tf.convert_to_tensor(results, dtype=tf.float32)
-        results.set_shape((self.batch_size, self.num_landmarks, 2)) # TODO: fix to consider batch size
-        results = tf.expand_dims(results, axis=0)
+        results.set_shape((self.batch_size, self.num_landmarks, 2))
         return results 
 
 
@@ -450,12 +448,10 @@ class DlibLandmarksDetector(LandmarkDetector):
             if len(faces) > 0:
                 landmarks_array = landmarks_to_array_dlib(faces[0].parts())
                 clip_landmarks.append(landmarks_array) # TODO: fix to work with batch size > 1
-        if len(clip_landmarks) > 0:
-            clip_landmarks = np.array(clip_landmarks)
-            clip_landmarks = np.moveaxis(clip_landmarks, 1, 2)
-        else:
-            clip_landmarks = get_default_landmarks()
-            clip_landmarks = np.expand_dims(clip_landmarks, axis=0)
+            else:
+                clip_landmarks.append(get_default_landmarks())
+        clip_landmarks = np.array(clip_landmarks)
+        clip_landmarks = np.moveaxis(clip_landmarks, 1, 2)
         return np.ndarray.astype(clip_landmarks, dtype=np.float32)
 
 
