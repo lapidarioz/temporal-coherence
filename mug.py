@@ -145,19 +145,7 @@ class FrameDataGenerator():
     def _get_current_frames(self):
         return self._previous_frame(), self._current_frame(), self._next_frame()
     
-    def _get_batch(self):
-        batch_previous_frame = []
-        batch_current_frame = []
-        batch_next_frame = []
-        for i in range(self.batch_size):
-            previous_frame, current_frame, next_frame = self._get_current_frames()
-            batch_previous_frame.append(previous_frame)
-            batch_current_frame.append(current_frame)
-            batch_next_frame.append(next_frame)
-        return np.array(batch_previous_frame), np.array(batch_current_frame), np.array(batch_next_frame)
-
-
-    def __next__(self): # TODO: fix to consider batch size
+    def _get_next_frames(self):
         self.current_frame_index += 1 # Frame index start at one because we have to return the previous frame
         if not self._has_current_video():
             self._end_of_videos()
@@ -166,6 +154,21 @@ class FrameDataGenerator():
                 self._load_next_video()
             else:
                 self._end_of_videos()
+        return self._get_current_frames()
+    
+    def _get_batch(self):
+        batch_previous_frame = []
+        batch_current_frame = []
+        batch_next_frame = []
+        for i in range(self.batch_size):
+            previous_frame, current_frame, next_frame = self._get_next_frames()
+            batch_previous_frame.append(previous_frame)
+            batch_current_frame.append(current_frame)
+            batch_next_frame.append(next_frame)
+        return np.array(batch_previous_frame), np.array(batch_current_frame), np.array(batch_next_frame)
+
+
+    def __next__(self):
         return self._get_batch()
     
     def __call__(self):
