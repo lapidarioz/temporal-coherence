@@ -11,7 +11,12 @@ from normalize import images_from_normalized
 # e.g. maximize the distance between landmarks for odd and even frames
 def get_default_landmarks(i=None):
     landmarks = np.array(DEFAULT_LANDMARKS, dtype=np.float32)
-    landmarks = landmarks + tf.random.uniform(landmarks.shape, -0.1, 0.1)
+    if i is None:
+        landmarks = landmarks + tf.random.uniform(landmarks.shape, -0.1, 0.1)
+    elif i % 2 == 0:
+            landmarks = landmarks + -0.1
+    else:
+        landmarks = landmarks + 0.1
     return np.moveaxis(landmarks, 0, 1)
 
 class LandmarkDetector():
