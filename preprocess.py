@@ -80,7 +80,7 @@ class FrameDataGenerator():
         return next(self)
     
     def take(self, n):
-        for i in range(n):
+        for i in range(n+1): # Frame index start at one
             try:
                 yield self()
             except StopIteration:
