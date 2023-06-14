@@ -21,7 +21,7 @@ def get_default_landmarks(i=None):
 
 class LandmarkDetector():
 
-    def __init__(self, batch_size, num_landmarks=68):
+    def __init__(self, num_landmarks=68):
         self.holistic_model = mp.solutions.holistic.Holistic(
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5
@@ -29,16 +29,16 @@ class LandmarkDetector():
         self.landmark_points_68 = [162,234,93,58,172,136,149,148,152,377,378,365,397,288,323,454,389,71,63,105,66,107,336,
                   296,334,293,301,168,197,5,4,75,97,2,326,305,33,160,158,133,153,144,362,385,387,263,373,
                   380,61,39,37,0,267,269,291,405,314,17,84,181,78,82,13,312,308,317,14,87]
-        self.batch_size = batch_size
         self.num_landmarks = num_landmarks
     
     def preprocess_and_detect_landmarks_numpy(self, images):
         raise NotImplementedError
 
     def preprocess_and_detect_landmarks(self, images):
+        batch_size = images.shape[0]
         results = tf.numpy_function(self.preprocess_and_detect_landmarks_numpy, [images], Tout=[tf.float32])
         results = tf.convert_to_tensor(results, dtype=tf.float32)
-        results.set_shape((self.batch_size, self.num_landmarks, 2))
+        results.set_shape((batch_size, self.num_landmarks, 2))
         return results 
 
 
@@ -107,7 +107,9 @@ def compute_displacements_interpolation(points_a, points_b, image_width, image_h
         displacements_map_b = interpolator_b(X, Y)
         displacements_map = np.mean([displacements_map_a, displacements_map_b], axis=0)
         all_displacements_map.append(displacements_map)
-    return np.array(all_displacements_map, dtype=np.float32)
+    all_displacements_map = np.array(all_displacements_map, dtype=np.float32)
+    all_displacements_map = np.moveaxis(all_displacements_map, 0, -1)
+    return all_displacements_map
 
 @tf.function
 def get_tensors_displacements(points_a, points_b, image_width, image_height, batch_size):

@@ -65,7 +65,6 @@ def coherence_mean_landmarks_loss(previous_y_true_landmarks, y_true_landmarks, p
 class GeneratorLoss(object):
 
     def __init__(self,
-                landmark_detector,
                 main_loss_function,
                 lambda_main_loss=1,
                 coherence_loss_function=None,
@@ -83,9 +82,18 @@ class GeneratorLoss(object):
         self.landmarks_coherence_loss_function = landmarks_coherence_loss_function
         self.lambda_landmarks_coherence_loss = lambda_landmarks_coherence_loss
         self.cross_entropy_loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-        self.landmark_detector = landmark_detector
 
-    def __call__(self, disc_generated_output, previous_gen, current_gen, previous_target, current_target):
+    def __call__(self,
+      disc_generated_output,
+      previous_gen,
+      current_gen,
+      previous_target,
+      current_target,
+      previous_target_landmarks,
+      current_target_landmarks,
+      previous_gen_landmarks,
+      current_gen_landmarks,
+      ):
         gan_loss = self.cross_entropy_loss(tf.ones_like(disc_generated_output), disc_generated_output)
 
         if self.main_loss_function:
@@ -101,16 +109,21 @@ class GeneratorLoss(object):
         landmarks_loss = 0
         landmarks_coherence_loss = 0
 
-        if self.landmarks_loss_function or self.landmarks_coherence_loss_function:
-            # TODO: compute landmarks only once per image
-            current_target_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(current_target)[0] # TODO: fix to work with batch > 1
-            current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(current_gen)[0] # TODO: fix to work with batch > 1
-            if self.lambda_landmarks_loss:
-                landmarks_loss = mean_loss(current_target_landmarks, current_gen_landmarks, self.landmarks_loss_function) * self.lambda_landmarks_loss
-            if self.landmarks_coherence_loss_function:
-                previous_target_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_target)[0] # TODO: fix to work with batch > 1
-                previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_gen)[0] # TODO: fix to work with batch > 1
-                landmarks_coherence_loss = coherence_mean_landmarks_loss(previous_target_landmarks, current_target_landmarks, previous_gen_landmarks, current_gen_landmarks, self.landmarks_coherence_loss_function) * self.lambda_landmarks_coherence_loss
+        if self.lambda_landmarks_loss:
+            landmarks_loss = mean_loss(
+                current_target_landmarks,
+                current_gen_landmarks,
+                self.landmarks_loss_function
+              ) * self.lambda_landmarks_loss
+            
+        if self.landmarks_coherence_loss_function:
+            landmarks_coherence_loss = coherence_mean_landmarks_loss(
+              previous_target_landmarks,
+              current_target_landmarks,
+              previous_gen_landmarks,
+              current_gen_landmarks,
+              self.landmarks_coherence_loss_function
+            ) * self.lambda_landmarks_coherence_loss
 
         total_gen_loss = gan_loss + main_loss + coherence_loss + landmarks_loss
 

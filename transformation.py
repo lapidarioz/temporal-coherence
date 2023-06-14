@@ -1,5 +1,4 @@
 import cv2 
-import tensorflow as tf
 import numpy as np
 from settings.facial import DEFAULT_TRIANGULATION
 
@@ -49,7 +48,10 @@ def warp_triangle(img1, img2, t1, t2):
 
 
 def warp_all(input_image, input_triangles, new_triangles):
-    input_image_warped = input_image.numpy().copy()
+    if type(input_image) == np.ndarray:
+        input_image_warped = input_image.copy()
+    else:
+        input_image_warped = input_image.numpy().copy()
 
     for current_ipunt_triangle, current_new_triangle in zip(input_triangles,new_triangles):
         warp_triangle(input_image, input_image_warped, current_ipunt_triangle, current_new_triangle)
@@ -57,7 +59,7 @@ def warp_all(input_image, input_triangles, new_triangles):
     return input_image_warped
 
 def get_new_landmarks(source_landmarks_previous, source_landmarks_current, target_landmarks_current):
-    return tf.add(tf.subtract(source_landmarks_current, source_landmarks_previous), target_landmarks_current)
+    return np.add(np.subtract(source_landmarks_current, source_landmarks_previous), target_landmarks_current)
 
 
 def deform(input_image, input_landmarks, previous_source_landmarks, current_source_landmarks):

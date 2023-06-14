@@ -24,6 +24,8 @@ class FrameDataGenerator():
         self.current_video_index = 0
         self.current_frame_index = 0
         self._load_current_video()
+        self.height = self.current_video.shape[1]
+        self.width = self.current_video.shape[2]
     
 
     def _current_frame(self):
@@ -99,22 +101,29 @@ class FrameDataGenerator():
 
 class PreprocessedFrameDataGenerator(FrameDataGenerator):
 
-    def __init__(self, videos_path, batch_size=1):
-        super().__init__(videos_path, batch_size)
-        self.landmark_detector = DlibLandmarksDetector(batch_size)
+    def __init__(self, videos_path, landmark_detector=None):
+        if landmark_detector:
+            self.landmark_detector = landmark_detector
+        else:
+            self.landmark_detector = DlibLandmarksDetector(1)
+        super().__init__(videos_path, 1)
     
     def _load_current_video(self):
         super()._load_current_video()
-        self._deformed_frame = self.current_video[0] # first frame as input
+        self._deformed_frame = self._first_frame() # first frame as input
         self._current_source_video = self.current_video # TODO: change this to the most similar video
         self._landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self.current_video)
         self._current_source_landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self._current_source_video)
         self._deformed_landmarks = self._landmarks[0]
+        self.previously_generated = self._first_frame() # first frame as input
     
     def _load_next_video(self):
         super()._load_next_video()
         self.height = self.current_video.shape[1]
         self.width = self.current_video.shape[2]
+
+    def _first_frame(self):
+        return self.current_video[0]
     
     def _current_landmarks(self):
         return self._landmarks[self.current_frame_index]
@@ -142,45 +151,35 @@ class PreprocessedFrameDataGenerator(FrameDataGenerator):
             1)
 
     def _get_current_frames(self):
+        return None # TODO: get generated frame?
+    
+    def generate_next_frame(self, model):
+        try:
+            _ = self._get_next_frames()
+        except StopIteration:
+            self._restart()
+            _ = self._get_next_frames()
+        previously_generated = self.previously_generated
         deformed_frame = self._deformed_frame 
         self._deform_current_frame() # TODO: put in next
-        return (
+        generated_frame = model([self._first_frame(), previously_generated, deformed_frame, self._get_displacements()])
+        self.previously_generated = generated_frame
+        return previously_generated, generated_frame, self._current_frame()
+    
+    def next_loss(self, model, loss_function, disc_generated_output):
+        previously_generated, generated_frame = self.generate_next_frame(model)
+        previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(previously_generated)
+        current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(generated_frame)
+        loss_value = loss_function(
+            disc_generated_output,
+            previously_generated,
+            generated_frame,
             self._previous_frame(),
             self._current_frame(),
-            self._next_frame(),
-            deformed_frame,
-            self._get_displacements(),
-            self._previous_landmarks,
-            self._landmarks,
-            self._next_landmarks
-        )
-
-    def _get_batch(self):
-        batch_previous_frame = []
-        batch_current_frame = []
-        batch_next_frame = []
-        batch_deformed_frame = []
-        batch_displacements = []
-        batch_previous_landmarks = []
-        batch_current_landmarks = []
-        batch_next_landmarks = []
-        for i in range(self.batch_size):
-            previous_frame,current_frame, next_frame = self._get_next_frames()
-            batch_previous_frame.append(previous_frame)
-            batch_current_frame.append(current_frame)
-            batch_next_frame.append(next_frame)
-            batch_deformed_frame.append(self._deformed_frame)
-            batch_displacements.append(self._get_displacements())
-            batch_previous_landmarks.append(self._previous_landmarks)
-            batch_current_landmarks.append(self._landmarks)
-            batch_next_landmarks.append(self._next_landmarks)
-        return (
-            np.array(batch_previous_frame),
-            np.array(batch_current_frame),
-            np.array(batch_next_frame),
-            np.array(batch_deformed_frame),
-            np.array(batch_displacements),
-            np.array(batch_previous_landmarks),
-            np.array(batch_current_landmarks),
-            np.array(batch_next_landmarks)
-        )
+            self._previous_landmarks(),
+            self._current_landmarks(),
+            previous_gen_landmarks,
+            current_gen_landmarks
+        )        
+        return loss_value
+    

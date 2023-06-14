@@ -67,9 +67,9 @@ def get_discriminator_model(img_width, img_height, n_channels):
 
 def get_generator_model(img_width, img_height, n_channels):
     previous = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], dtype=tf.float64, name='previous_frame')
-    # warped = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], dtype=tf.float64, name='warped_frame')
-    # neutral = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], dtype=tf.float64, name='neutral_frame')
-    # distances = tf.keras.layers.Input(shape=[img_width, img_height, 1], dtype=tf.float64, name='distances')
+    warped = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], dtype=tf.float64, name='warped_frame')
+    neutral = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], dtype=tf.float64, name='neutral_frame')
+    distances = tf.keras.layers.Input(shape=[img_width, img_height, 1], dtype=tf.float64, name='distances')
 
 
     down_stack = [
@@ -95,8 +95,8 @@ def get_generator_model(img_width, img_height, n_channels):
                                             kernel_initializer=initializer,
                                             activation='tanh')  # (batch_size, , frames_group_size, 64, 64, 3)
 
-    # x = tf.keras.layers.concatenate([warped, neutral, distances, previous])
-    x = tf.keras.layers.concatenate([previous])
+    x = tf.keras.layers.concatenate([neutral, previous, warped, distances])
+    # x = tf.keras.layers.concatenate([previous])
 
     # Downsampling through the model
     skips = []
