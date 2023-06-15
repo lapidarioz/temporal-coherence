@@ -105,7 +105,7 @@ class PreprocessedFrameDataGenerator(FrameDataGenerator): # TODO: adapat to only
         if landmark_detector:
             self.landmark_detector = landmark_detector
         else:
-            self.landmark_detector = DlibLandmarksDetector(1)
+            self.landmark_detector = DlibLandmarksDetector()
         self.generator = generator
         self.discriminator = discriminator
         self.generator_loss_function = generator_loss_function
@@ -204,4 +204,10 @@ class PreprocessedFrameDataGenerator(FrameDataGenerator): # TODO: adapat to only
             current_gen_landmarks
         )        
         return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss
+    
+    def restart(self):
+        return self._restart()
+    
+    def __next__(self):
+        yield self.generate_next_frame()
     
