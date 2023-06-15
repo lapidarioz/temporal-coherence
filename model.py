@@ -39,10 +39,11 @@ def upsample(filters, size, strides=2, apply_dropout=False):
 def get_discriminator_model(img_width, img_height, n_channels):
   initializer = tf.random_normal_initializer(0., 0.02)
 
-  inp = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], name='current_frame')
-  tar = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], name='folowing_frame')
+  inp = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], name='previous_frame')
+  tar = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], name='current_frame')
+  inputs = [inp, tar]
 
-  x = tf.keras.layers.concatenate([inp, tar])  # (batch_size, 256, 256, channels*2)
+  x = tf.keras.layers.concatenate(inputs)  # (batch_size, 256, 256, channels*2)
 
   down1 = downsample(64, 4, 2, apply_batchnorm=False)(x)  # (batch_size, 128, 128, 64)
   down2 = downsample(128, 4, 2)(down1)  # (batch_size, 64, 64, 128)
@@ -62,7 +63,7 @@ def get_discriminator_model(img_width, img_height, n_channels):
   last = tf.keras.layers.Conv2D(1, 2, strides=1,
                                 kernel_initializer=initializer)(zero_pad2)  # (batch_size, 30, 30, 1)
 
-  return tf.keras.Model(inputs=[inp, tar], outputs=last)
+  return tf.keras.Model(inputs=inputs, outputs=last)
 
 
 def get_generator_model(img_width, img_height, n_channels):
@@ -70,7 +71,7 @@ def get_generator_model(img_width, img_height, n_channels):
     warped = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], dtype=tf.float64, name='warped_frame')
     neutral = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], dtype=tf.float64, name='neutral_frame')
     distances = tf.keras.layers.Input(shape=[img_width, img_height, 1], dtype=tf.float64, name='distances')
-
+    inputs = [neutral, previous, warped, distances]
 
     down_stack = [
         downsample(128, 4, 2, apply_batchnorm=False),  # (batch_size, frames_group_size, 32, 32, 128)
@@ -95,7 +96,8 @@ def get_generator_model(img_width, img_height, n_channels):
                                             kernel_initializer=initializer,
                                             activation='tanh')  # (batch_size, , frames_group_size, 64, 64, 3)
 
-    x = tf.keras.layers.concatenate([neutral, previous, warped, distances])
+    
+    x = tf.keras.layers.concatenate(inputs)
     # x = tf.keras.layers.concatenate([previous])
 
     # Downsampling through the model
@@ -113,9 +115,4 @@ def get_generator_model(img_width, img_height, n_channels):
 
     x = last(x)
 
-    return tf.keras.Model(inputs=[
-        # warped,
-        # neutral,
-        # distances,
-        previous
-        ], outputs=x)
+    return tf.keras.Model(inputs=inputs, outputs=x)

@@ -99,13 +99,17 @@ class FrameDataGenerator():
                 self._restart()
 
 
-class PreprocessedFrameDataGenerator(FrameDataGenerator):
+class PreprocessedFrameDataGenerator(FrameDataGenerator): # TODO: adapat to only 1 frame input
 
-    def __init__(self, videos_path, landmark_detector=None):
+    def __init__(self, videos_path, generator, discriminator, generator_loss_function, discriminator_loss_function, landmark_detector=None):
         if landmark_detector:
             self.landmark_detector = landmark_detector
         else:
             self.landmark_detector = DlibLandmarksDetector(1)
+        self.generator = generator
+        self.discriminator = discriminator
+        self.generator_loss_function = generator_loss_function
+        self.discriminator_loss_function = discriminator_loss_function
         super().__init__(videos_path, 1)
     
     def _load_current_video(self):
@@ -121,39 +125,50 @@ class PreprocessedFrameDataGenerator(FrameDataGenerator):
         super()._load_next_video()
         self.height = self.current_video.shape[1]
         self.width = self.current_video.shape[2]
+    
+    def _current_frame(self):
+        return self.current_video[self.current_frame_index:self.current_frame_index+1]
+    
+    def _next_frame(self):
+        return self.current_video[self.current_frame_index+1:self.current_frame_index+2]
+    
+    def _previous_frame(self):
+        return self.current_video[self.current_frame_index-1:self.current_frame_index]
 
     def _first_frame(self):
-        return self.current_video[0]
+        return self.current_video[0:1]
     
     def _current_landmarks(self):
-        return self._landmarks[self.current_frame_index]
+        return self._landmarks[self.current_frame_index:self.current_frame_index+1]
     
     def _next_landmarks(self):
-        return self._landmarks[self.current_frame_index+1]
+        return self._landmarks[self.current_frame_index+1:self.current_frame_index+2]
     
     def _previous_landmarks(self):
-        return self._landmarks[self.current_frame_index-1]
+        return self._landmarks[self.current_frame_index-1:self.current_frame_index]
 
     def _deform_current_frame(self): # TODO: put in next the change of _deformed_landmarks and _deformed_frame
         self._deformed_frame, self._deformed_landmarks = deform(
-            self._deformed_frame,
+            self._deformed_frame[0], # only one frame
             self._deformed_landmarks,
             self._current_source_landmarks[self.current_frame_index-1],
             self._current_source_landmarks[self.current_frame_index]
         )
+        self._deformed_frame = self._deformed_frame[None, :, :, :] # add batch dimension
     
     def _get_displacements(self):
-        return compute_displacements_interpolation(
+        displacements = compute_displacements_interpolation(
             self._current_source_landmarks[self.current_frame_index-1],
             self._current_source_landmarks[self.current_frame_index],
             self.width,
             self.height,
             1)
+        return displacements[None, :, :, :] # add batch dimension
 
     def _get_current_frames(self):
         return None # TODO: get generated frame?
     
-    def generate_next_frame(self, model):
+    def generate_next_frame(self):
         try:
             _ = self._get_next_frames()
         except StopIteration:
@@ -161,25 +176,32 @@ class PreprocessedFrameDataGenerator(FrameDataGenerator):
             _ = self._get_next_frames()
         previously_generated = self.previously_generated
         deformed_frame = self._deformed_frame 
-        self._deform_current_frame() # TODO: put in next
-        generated_frame = model([self._first_frame(), previously_generated, deformed_frame, self._get_displacements()])
+        self._deform_current_frame()
+        l = [self._first_frame(), previously_generated, deformed_frame, self._get_displacements()]
+        generated_frame = self.generator(l)
         self.previously_generated = generated_frame
         return previously_generated, generated_frame, self._current_frame()
     
-    def next_loss(self, model, loss_function, disc_generated_output):
-        previously_generated, generated_frame = self.generate_next_frame(model)
-        previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(previously_generated)
-        current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(generated_frame)
-        loss_value = loss_function(
+    def next_loss(self):
+        previously_generated, generated_frame, current_frame = self.generate_next_frame()
+        previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previously_generated)
+        current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frame)
+        previous_frame = self._previous_frame()
+
+        disc_real_output = self.discriminator([previous_frame, current_frame], training=True)
+        disc_generated_output = self.discriminator([previous_frame, generated_frame], training=True)
+        disc_loss_value = self.discriminator_loss_function(disc_real_output, disc_generated_output)
+
+        total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss = self.generator_loss_function(
             disc_generated_output,
             previously_generated,
             generated_frame,
-            self._previous_frame(),
-            self._current_frame(),
+            previous_frame,
+            current_frame,
             self._previous_landmarks(),
             self._current_landmarks(),
             previous_gen_landmarks,
             current_gen_landmarks
         )        
-        return loss_value
+        return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss
     
