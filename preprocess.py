@@ -101,7 +101,7 @@ class FrameDataGenerator():
 
 class PreprocessedFrameDataGenerator(FrameDataGenerator): # TODO: adapat to only 1 frame input
 
-    def __init__(self, videos_path, generator, discriminator, generator_loss_function, discriminator_loss_function, landmark_detector=None):
+    def __init__(self, videos_path, generator, discriminator, generator_loss_function, discriminator_loss_function, landmark_detector=None, repeat=False):
         if landmark_detector:
             self.landmark_detector = landmark_detector
         else:
@@ -110,6 +110,7 @@ class PreprocessedFrameDataGenerator(FrameDataGenerator): # TODO: adapat to only
         self.discriminator = discriminator
         self.generator_loss_function = generator_loss_function
         self.discriminator_loss_function = discriminator_loss_function
+        self.repeat = repeat
         super().__init__(videos_path, 1)
     
     def _load_current_video(self):
@@ -172,8 +173,13 @@ class PreprocessedFrameDataGenerator(FrameDataGenerator): # TODO: adapat to only
         try:
             _ = self._get_next_frames()
         except StopIteration:
-            self._restart()
-            _ = self._get_next_frames()
+            import tensorflow as tf
+            tf.print("End of videos")
+            if self.repeat:
+                self._restart()
+                _ = self._get_next_frames()
+            else:
+                raise StopIteration
         previously_generated = self.previously_generated
         deformed_frame = self._deformed_frame 
         self._deform_current_frame()
