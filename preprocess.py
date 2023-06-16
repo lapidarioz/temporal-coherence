@@ -194,36 +194,9 @@ class PreprocessedFrameDataGenerator(FrameDataGenerator):
         previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previously_generated)
         current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frame)
         previous_frame = self._previous_frame()
-
         disc_real_output = self.discriminator([previous_frame, current_frame], training=True)
         disc_generated_output = self.discriminator([previous_frame, generated_frame], training=True)
         disc_loss_value = self.discriminator_loss_function(disc_real_output, disc_generated_output)
-
-        ### PLOT
-        import tensorflow as tf
-        tf.print("Neutral: ")
-        plot_normalized_sequence(self._first_frame())
-        tf.print("Previous: ")
-        plot_normalized_sequence(previous_frame)
-        tf.print("Previous generated: ")
-        plot_normalized_sequence(previously_generated)
-        tf.print("Generated: ")
-        plot_normalized_sequence(generated_frame)
-        tf.print("Current: ")
-        plot_normalized_sequence(current_frame)
-        tf.print("Deformed: ")
-        plot_normalized_sequence(self._deformed_frame)
-        tf.print("Displacements: ")
-        plot_normalized_sequence(self._get_displacements())
-        tf.print("Previous landmarks: ")
-        plot_landmarks(previous_frame, self._previous_landmarks())
-        tf.print("Current landmarks: ")
-        plot_landmarks(current_frame, self._current_landmarks())
-        tf.print("Previous generated landmarks: ")
-        plot_landmarks(previously_generated, previous_gen_landmarks)
-        tf.print("Current generated landmarks: ")
-        plot_landmarks(generated_frame, current_gen_landmarks)
-
         total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss = self.generator_loss_function(
             disc_generated_output,
             previously_generated,
