@@ -82,7 +82,7 @@ def plot_landmarks(sample_sequence, landmarks):
     fig = plt.figure(figsize=(20, 4))
     for i, im in enumerate(plot_sequence):
         ax = fig.add_subplot(rows,cols,i+1)
-        im = 
+        im = images_from_normalized(im)
         ax.imshow(im)
         ax.scatter(landmarks[i, :, 0], landmarks[i, :, 1], s=10, c='r') 
         ax.axis('off')
