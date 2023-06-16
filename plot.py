@@ -71,3 +71,21 @@ def generate_sequences(model, sample_target, sample_input):
   prediction = model(sample_input, training=True)
   plot_results(sample_input, sample_target, prediction)
 
+def plot_landmarks(sample_sequence, landmarks):
+    plot_sequence = list(sample_sequence)
+    n_frames = len(plot_sequence)
+    if n_frames > 20:
+        plot_sequence = plot_sequence[:20]
+        n_frames = 20
+    rows = ((n_frames-1) // 10)+1
+    cols = max(n_frames % 10, 10)
+    fig = plt.figure(figsize=(20, 4))
+    for i, im in enumerate(plot_sequence):
+        ax = fig.add_subplot(rows,cols,i+1)
+        im = 
+        ax.imshow(im)
+        ax.scatter(landmarks[i, :, 0], landmarks[i, :, 1], s=10, c='r') 
+        ax.axis('off')
+    plt.show()
+    plt.close()
+
