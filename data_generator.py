@@ -263,8 +263,14 @@ class MultipleVideoDataGenerator():
         for batch_index in range(self.batch_size):
             self._load_next_video(batch_index)
     
-    def _batch_zero_aray(self):
+    def _batch_image_zeros(self):
         return np.zeros((self.batch_size, self.height, self.width, 3))
+    
+    def _batch_landmarks_zeros(self):
+        return np.zeros((self.batch_size, self.num_landmarks, 2))
+    
+    def _batch_displacements_zeros(self):
+        return np.zeros((self.batch_size, self.height, self.width, 1))
     
     def _restart(self):
         self._batch_videos_index = np.zeros(self.batch_size, dtype=int)
@@ -274,21 +280,21 @@ class MultipleVideoDataGenerator():
         self._batch_landmarks = [None] * self.batch_size
         self._batch_source_videos = [None] * self.batch_size
         self._batch_source_landmarks = [None] * self.batch_size
-        self._batch_deformed_frames = self._batch_zero_aray()
-        self._batch_deformed_landmarks = np.zeros((self.batch_size, self.num_landmarks, 2))
-        self._batch_previously_generated_frames = self._batch_zero_aray()
-        self._batch_displacements = np.zeros((self.batch_size, self.height, self.width, 1))
+        self._batch_deformed_frames = self._batch_image_zeros()
+        self._batch_deformed_landmarks = self._batch_landmarks_zeros()
+        self._batch_previously_generated_frames = self._batch_image_zeros()
+        self._batch_displacements = self._batch_displacements_zeros()
         self._load_batch_videos()
 
     def _load_item(self, array, batch_index, frame_shift):
-        frame_index = int(self._batch_videos_frame_index[batch_index]+frame_shift)
+        frame_index = self._batch_videos_frame_index[batch_index]+frame_shift
         return array[batch_index][frame_index]
     
     def _get_frame(self, batch_index, frame_shift=0):
         return self._load_item(self._batch_videos, batch_index, frame_shift)
     
     def _get_frames(self, frame_shift=0):
-        frames = self._batch_zero_aray()
+        frames = self._batch_image_zeros()
         for batch_index in range(self.batch_size):
             frames[batch_index] = self._get_frame(batch_index, frame_shift)
         return frames
@@ -297,7 +303,7 @@ class MultipleVideoDataGenerator():
         return self._load_item(self._batch_landmarks, batch_index, frame_shift)
     
     def _get_landmarks(self, frame_shift=0):
-        landmarks = self._batch_zero_aray()
+        landmarks = self._batch_landmarks_zeros()
         for batch_index in range(self.batch_size):
             landmarks[batch_index] = self._get_landmark(batch_index, frame_shift)
         return landmarks
@@ -326,44 +332,58 @@ class MultipleVideoDataGenerator():
             self._load_next_video(batch_index)
     
     def _deform_current_frames(self, batch_index):
-        frame_index = int(self._batch_videos_frame_index[batch_index])
+        frame_index = self._batch_videos_frame_index[batch_index]
         deformed_frame, deformed_landmarks = deform(
             self._batch_deformed_frames[batch_index],
             self._batch_deformed_landmarks[batch_index],
-            self._batch_source_landmarks[frame_index-1],
-            self._batch_source_landmarks[frame_index]
+            self._batch_source_landmarks[batch_index][frame_index-1],
+            self._batch_source_landmarks[batch_index][frame_index]
         )
         self._batch_deformed_frames[batch_index] = deformed_frame
         self._batch_deformed_landmarks[batch_index] = deformed_landmarks
     
     def _compute_current_displacements(self, batch_index):
-        frame_index = int(self._batch_videos_frame_index[batch_index])
+        frame_index = self._batch_videos_frame_index[batch_index]
         displacements = compute_displacements_interpolation(
-            self._batch_source_landmarks[frame_index-1],
-            self._batch_source_landmarks[frame_index],
+            self._batch_source_landmarks[batch_index][frame_index-1],
+            self._batch_source_landmarks[batch_index][frame_index],
             self.width,
             self.height,
             1)
         self._batch_displacements[batch_index] = displacements
     
-    def generate_next_frames(self):
-        generated_frames = self._batch_zero_aray()
-        current_frames = self._batch_zero_aray()
-        previously_generated_frames = self._batch_zero_aray()
+    def _get_all_inputs(self):
+        generated_frames = self._batch_image_zeros()
+        current_frames = self._batch_image_zeros()
+        previously_generated_frames = self._batch_image_zeros()
+        first_frames = self._batch_image_zeros()
+        deformed_frames = self._batch_image_zeros()
+        displacements = self._batch_displacements_zeros()
+
         for batch_index in range(self.batch_size):
             self._deform_current_frames(batch_index)
             self._compute_current_displacements(batch_index)
-            l = [
-                self._first_frame(batch_index),
-                self._batch_deformed_frames[batch_index],
-                self._batch_previously_generated_frames[batch_index],
-                self._batch_displacements[batch_index]
-                 ]
+            first_frames[batch_index] = self._first_frame(batch_index)
+            deformed_frames[batch_index] = self._batch_deformed_frames[batch_index]
             previously_generated_frames[batch_index] = self._batch_previously_generated_frames[batch_index]
-            generated_frame = self.generator(l)
-            generated_frames[batch_index] = generated_frame
+            displacements[batch_index] = self._batch_displacements[batch_index]
+            previously_generated_frames[batch_index] = self._batch_previously_generated_frames[batch_index]
             current_frames[batch_index] = self._get_frame(batch_index)
-            self._load_next_frames(batch_index, generated_frame)
+        
+        generated_frames = self.generator([
+            first_frames,
+            previously_generated_frames,
+            deformed_frames,
+            displacements
+        ])
+        
+        for batch_index in range(self.batch_size):
+            self._load_next_frames(batch_index, generated_frames[batch_index])
+        
+        return previously_generated_frames, generated_frames, current_frames, first_frames, deformed_frames, displacements
+    
+    def generate_next_frames(self):
+        previously_generated_frames, generated_frames, current_frames, _, _, _ = self._get_all_inputs()
         return previously_generated_frames, generated_frames, current_frames
     
     def next_loss(self):
@@ -388,7 +408,7 @@ class MultipleVideoDataGenerator():
         return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss
     
     def next_plot(self):
-        previously_generated_frames, generated_frames, current_frames = self.generate_next_frames()
+        previously_generated_frames, generated_frames, current_frames, first_frames, deformed_frames, displacements = self._get_all_inputs()
         previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previously_generated_frames)
         current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
         previous_frames = self._get_frames(-1)
@@ -402,6 +422,12 @@ class MultipleVideoDataGenerator():
         plot_normalized_sequence(current_frames)
         print("previous_frames")
         plot_normalized_sequence(previous_frames)
+        print("first_frames")
+        plot_normalized_sequence(first_frames)
+        print("deformed_frames")
+        plot_normalized_sequence(deformed_frames)
+        print("displacements")
+        plot_normalized_sequence(displacements)
         print("previous_gen_landmarks")
         plot_landmarks(previously_generated_frames, previous_gen_landmarks)
         print("current_gen_landmarks")
