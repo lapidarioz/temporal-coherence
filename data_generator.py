@@ -220,7 +220,8 @@ class PreprocessedFrameDataGenerator(FrameDataGenerator):
 
 class MultipleVideoDataGenerator():
     
-    def __init__(self, videos_path, 
+    def __init__(self,
+                 videos_path, 
                  generator,
                  discriminator,
                  generator_loss_function,
@@ -229,11 +230,11 @@ class MultipleVideoDataGenerator():
                  height,
                  width,
                  landmark_detector=None):
+        self.n = len(videos_path)
+        self.batch_size = batch_size
         if self.n < self.batch_size:
             raise ValueError("There are less videos than the batch size")
         self.videos_path = videos_path
-        self.n = len(videos_path)
-        self.batch_size = batch_size
         self.landmark_detector = landmark_detector if landmark_detector else DlibLandmarksDetector()
         self.generator = generator
         self.discriminator = discriminator
@@ -241,12 +242,13 @@ class MultipleVideoDataGenerator():
         self.discriminator_loss_function = discriminator_loss_function
         self.height = height
         self.width = width
+        self.num_landmarks = self.landmark_detector.num_landmarks
         self._restart()
 
     def _load_batch_video(self, batch_index):
-        self._batch_videos.append(np.load(self.videos_path[self._batch_videos_index[batch_index]]))
+        self._batch_videos[batch_index] = np.load(self.videos_path[self._batch_videos_index[batch_index]])
         if self._video_has_next_frames(batch_index):
-            self._batch_landmarks.append(self.landmark_detector.preprocess_and_detect_landmarks_numpy(self._batch_videos[batch_index]))
+            self._batch_landmarks[batch_index] = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self._batch_videos[batch_index])
             self._batch_deformed_frames[batch_index] = self._first_frame(batch_index) # first frame as input
             self._batch_deformed_landmarks[batch_index] = self._first_landmarks(batch_index)
             self._batch_source_videos[batch_index] = self._batch_videos[batch_index] # TODO: change this to the most similar video
@@ -265,15 +267,15 @@ class MultipleVideoDataGenerator():
         return np.zeros((self.batch_size, self.height, self.width, 3))
     
     def _restart(self):
-        self._batch_videos_index = np.zeros(self.batch_size)
+        self._batch_videos_index = np.zeros(self.batch_size, dtype=int)
         self._batch_next_video_index = 0
-        self._batch_videos_frame_index = np.ones(self.batch_size)
-        self._batch_videos = []
-        self._batch_landmarks = []
-        self._batch_source_videos = []
-        self._batch_source_landmarks = []
+        self._batch_videos_frame_index = np.ones(self.batch_size, dtype=int)
+        self._batch_videos = [None] * self.batch_size
+        self._batch_landmarks = [None] * self.batch_size
+        self._batch_source_videos = [None] * self.batch_size
+        self._batch_source_landmarks = [None] * self.batch_size
         self._batch_deformed_frames = self._batch_zero_aray()
-        self._batch_deformed_landmarks = self._batch_zero_aray()
+        self._batch_deformed_landmarks = np.zeros((self.batch_size, self.num_landmarks, 2))
         self._batch_previously_generated_frames = self._batch_zero_aray()
         self._batch_displacements = np.zeros((self.batch_size, self.height, self.width, 1))
         self._load_batch_videos()
@@ -384,4 +386,28 @@ class MultipleVideoDataGenerator():
             current_gen_landmarks
         )        
         return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss
+    
+    def next_plot(self):
+        previously_generated_frames, generated_frames, current_frames = self.generate_next_frames()
+        previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previously_generated_frames)
+        current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
+        previous_frames = self._get_frames(-1)
+        previous_landmarks = self._get_landmarks(-1)
+        current_landmarks = self._get_landmarks()
+        print("previously_generated_frames")
+        plot_normalized_sequence(previously_generated_frames)
+        print("generated_frames")
+        plot_normalized_sequence(generated_frames)
+        print("current_frames")
+        plot_normalized_sequence(current_frames)
+        print("previous_frames")
+        plot_normalized_sequence(previous_frames)
+        print("previous_gen_landmarks")
+        plot_landmarks(previously_generated_frames, previous_gen_landmarks)
+        print("current_gen_landmarks")
+        plot_landmarks(generated_frames, current_gen_landmarks)
+        print("previous_landmarks")
+        plot_landmarks(previous_frames, previous_landmarks)
+        print("current_landmarks")
+        plot_landmarks(current_frames, current_landmarks)
 
