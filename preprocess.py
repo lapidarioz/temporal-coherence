@@ -216,3 +216,128 @@ class PreprocessedFrameDataGenerator(FrameDataGenerator):
     def __next__(self):
         yield self.generate_next_frame()
     
+
+
+class MultipleVideoDataGenerator():
+    
+    def __init__(self, videos_path, generator, discriminator, generator_loss_function, discriminator_loss_function, batch_size, landmark_detector=None):
+        if self.n < self.batch_size:
+            raise ValueError("There are less videos than the batch size")
+        self.videos_path = videos_path
+        self.n = len(videos_path)
+        self.batch_size = batch_size
+        self.landmark_detector = landmark_detector if landmark_detector else DlibLandmarksDetector()
+        self.generator = generator
+        self.discriminator = discriminator
+        self.generator_loss_function = generator_loss_function
+        self.discriminator_loss_function = discriminator_loss_function
+        self._restart()
+
+    def _load_batch_video(self, batch_index):
+        self._batch_videos.append(np.load(self.videos_path[self._batch_videos_index[batch_index]]))
+        if self._video_has_next_frame(batch_index):
+            self._batch_landmarks.append(self.landmark_detector.preprocess_and_detect_landmarks_numpy(self._batch_videos[batch_index]))
+            self._batch_deformed_frames[batch_index] = self._first_frame(batch_index) # first frame as input
+            self._batch_deformed_landmarks[batch_index] = self._first_landmarks(batch_index)
+            self._batch_source_videos[batch_index] = self._batch_videos[batch_index] # TODO: change this to the most similar video
+            self._batch_source_landmarks[batch_index] = self._batch_landmarks[batch_index] # TODO: change this to the most similar video
+            self._batch_previously_generated[batch_index] = self._batch_deformed_frames[batch_index] # first frame as input
+            return True
+        else: # empty video
+            return False
+
+    def _load_batch_videos(self):
+        for batch_index in range(self.batch_size):
+            self._load_batch_video(batch_index)
+    
+    def _batch_zero_aray(self):
+        return np.zeros((self.batch_size, self.height, self.width, 3))
+    
+    def _restart(self):
+        self._batch_videos_index = np.arange(self.batch_size)
+        self._batch_next_video_index = self.batch_size+1
+        self._batch_videos_frame_index = np.ones(self.batch_size) # Frame index start at one to always return the previous frame
+        self._batch_videos = []
+        self._batch_landmarks = []
+        self._batch_source_videos = []
+        self._batch_source_landmarks = []
+        self._batch_deformed_frames = self._batch_zero_aray()
+        self._batch_deformed_landmarks = self._batch_zero_aray()
+        self._batch_previously_generated = self._batch_zero_aray()
+        self._load_batch_videos()
+        self.height = self._batch_videos[0].shape[1]
+        self.width = self._batch_videos[0].shape[2]
+    
+    def _load_frames(self, frame_shift=0):
+        current_frames = self._batch_zero_aray()
+        for batch_index in range(self.batch_size):
+            frame_index = int(self._batch_videos_frame_index[batch_index]+frame_shift)
+            current_frames[batch_index] = self._batch_videos[batch_index][frame_index]
+        return current_frames
+    
+    def _current_frames(self):
+        return self._load_frames()
+    
+    def _next_frames(self):
+        return self._load_frames(1)
+    
+    def _previous_frames(self):
+        return self._load_frames(-1)
+    
+    def _first_frame(self, batch_index):
+        return self._batch_videos[batch_index][0]
+    
+    def _first_landmarks(self, batch_index):
+        return self._batch_landmarks[batch_index][0]
+    
+    def _video_has_two_next_frames(self, batch_index):
+        return self._batch_videos_index[batch_index]+2 < self._batch_videos[batch_index].shape[0]
+    
+    def _load_next_video(self, batch_index):
+        while (True): # load next video with frames
+            self._batch_videos_index[batch_index] = self._batch_next_video_index
+            self._batch_next_video_index = (self._batch_next_video_index + 1) % self.n
+            if self._load_batch_video(batch_index):
+                break
+        
+    def _load_next_frames(self):
+        for batch_index in range(self.batch_size):
+            if self._video_has_two_next_frames(batch_index):
+                self._batch_videos_frame_index[batch_index] += 1
+            else: 
+                self._load_next_video(batch_index)
+    
+    def _get_batch(self):
+        batch_previous_frame = []
+        batch_current_frame = []
+        batch_next_frame = []
+        for i in range(self.batch_size):
+            previous_frame, current_frame, next_frame = self._get_next_frames()
+            batch_previous_frame.append(previous_frame)
+            batch_current_frame.append(current_frame)
+            batch_next_frame.append(next_frame)
+        return np.array(batch_previous_frame), np.array(batch_current_frame), np.array(batch_next_frame)
+
+
+    def __next__(self):
+        return self._get_batch()
+    
+    def __call__(self):
+        return next(self)
+    
+    def take(self, n):
+        for i in range(n+1): # Frame index start at one
+            try:
+                yield self()
+            except StopIteration:
+                self._restart()
+    
+    def __iter__(self):
+        return self
+    
+    def repeat(self):
+        while True:
+            try:
+                yield self()
+            except StopIteration:
+                self._restart()
