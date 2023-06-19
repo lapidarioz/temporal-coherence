@@ -220,7 +220,15 @@ class PreprocessedFrameDataGenerator(FrameDataGenerator):
 
 class MultipleVideoDataGenerator():
     
-    def __init__(self, videos_path, generator, discriminator, generator_loss_function, discriminator_loss_function, batch_size, landmark_detector=None):
+    def __init__(self, videos_path, 
+                 generator,
+                 discriminator,
+                 generator_loss_function,
+                 discriminator_loss_function,
+                 batch_size,
+                 height,
+                 width,
+                 landmark_detector=None):
         if self.n < self.batch_size:
             raise ValueError("There are less videos than the batch size")
         self.videos_path = videos_path
@@ -231,58 +239,66 @@ class MultipleVideoDataGenerator():
         self.discriminator = discriminator
         self.generator_loss_function = generator_loss_function
         self.discriminator_loss_function = discriminator_loss_function
+        self.height = height
+        self.width = width
         self._restart()
 
     def _load_batch_video(self, batch_index):
         self._batch_videos.append(np.load(self.videos_path[self._batch_videos_index[batch_index]]))
-        if self._video_has_next_frame(batch_index):
+        if self._video_has_next_frames(batch_index):
             self._batch_landmarks.append(self.landmark_detector.preprocess_and_detect_landmarks_numpy(self._batch_videos[batch_index]))
             self._batch_deformed_frames[batch_index] = self._first_frame(batch_index) # first frame as input
             self._batch_deformed_landmarks[batch_index] = self._first_landmarks(batch_index)
             self._batch_source_videos[batch_index] = self._batch_videos[batch_index] # TODO: change this to the most similar video
             self._batch_source_landmarks[batch_index] = self._batch_landmarks[batch_index] # TODO: change this to the most similar video
-            self._batch_previously_generated[batch_index] = self._batch_deformed_frames[batch_index] # first frame as input
+            self._batch_previously_generated_frames[batch_index] = self._batch_deformed_frames[batch_index] # first frame as input
+            self._batch_videos_frame_index[batch_index] = 1 # Frame index start at one to always return the previous frame
             return True
-        else: # empty video
+        else: # video has less than three frames
             return False
 
     def _load_batch_videos(self):
         for batch_index in range(self.batch_size):
-            self._load_batch_video(batch_index)
+            self._load_next_video(batch_index)
     
     def _batch_zero_aray(self):
         return np.zeros((self.batch_size, self.height, self.width, 3))
     
     def _restart(self):
-        self._batch_videos_index = np.arange(self.batch_size)
-        self._batch_next_video_index = self.batch_size+1
-        self._batch_videos_frame_index = np.ones(self.batch_size) # Frame index start at one to always return the previous frame
+        self._batch_videos_index = np.zeros(self.batch_size)
+        self._batch_next_video_index = 0
+        self._batch_videos_frame_index = np.ones(self.batch_size)
         self._batch_videos = []
         self._batch_landmarks = []
         self._batch_source_videos = []
         self._batch_source_landmarks = []
         self._batch_deformed_frames = self._batch_zero_aray()
         self._batch_deformed_landmarks = self._batch_zero_aray()
-        self._batch_previously_generated = self._batch_zero_aray()
+        self._batch_previously_generated_frames = self._batch_zero_aray()
+        self._batch_displacements = np.zeros((self.batch_size, self.height, self.width, 1))
         self._load_batch_videos()
-        self.height = self._batch_videos[0].shape[1]
-        self.width = self._batch_videos[0].shape[2]
+
+    def _load_item(self, array, batch_index, frame_shift):
+        frame_index = int(self._batch_videos_frame_index[batch_index]+frame_shift)
+        return array[batch_index][frame_index]
     
-    def _load_frames(self, frame_shift=0):
-        current_frames = self._batch_zero_aray()
+    def _get_frame(self, batch_index, frame_shift=0):
+        return self._load_item(self._batch_videos, batch_index, frame_shift)
+    
+    def _get_frames(self, frame_shift=0):
+        frames = self._batch_zero_aray()
         for batch_index in range(self.batch_size):
-            frame_index = int(self._batch_videos_frame_index[batch_index]+frame_shift)
-            current_frames[batch_index] = self._batch_videos[batch_index][frame_index]
-        return current_frames
+            frames[batch_index] = self._get_frame(batch_index, frame_shift)
+        return frames
     
-    def _current_frames(self):
-        return self._load_frames()
+    def _get_landmark(self, batch_index, frame_shift=0):
+        return self._load_item(self._batch_landmarks, batch_index, frame_shift)
     
-    def _next_frames(self):
-        return self._load_frames(1)
-    
-    def _previous_frames(self):
-        return self._load_frames(-1)
+    def _get_landmarks(self, frame_shift=0):
+        landmarks = self._batch_zero_aray()
+        for batch_index in range(self.batch_size):
+            landmarks[batch_index] = self._get_landmark(batch_index, frame_shift)
+        return landmarks
     
     def _first_frame(self, batch_index):
         return self._batch_videos[batch_index][0]
@@ -290,8 +306,8 @@ class MultipleVideoDataGenerator():
     def _first_landmarks(self, batch_index):
         return self._batch_landmarks[batch_index][0]
     
-    def _video_has_two_next_frames(self, batch_index):
-        return self._batch_videos_index[batch_index]+2 < self._batch_videos[batch_index].shape[0]
+    def _video_has_next_frames(self, batch_index):
+        return self._batch_videos_index[batch_index]+1 < self._batch_videos[batch_index].shape[0]
     
     def _load_next_video(self, batch_index):
         while (True): # load next video with frames
@@ -300,44 +316,72 @@ class MultipleVideoDataGenerator():
             if self._load_batch_video(batch_index):
                 break
         
-    def _load_next_frames(self):
+    def _load_next_frames(self, batch_index, previously_generated_frame):
+        if self._video_has_next_frames(batch_index):
+            self._batch_videos_frame_index[batch_index] += 1
+            self._batch_previously_generated_frames[batch_index] = previously_generated_frame
+        else: 
+            self._load_next_video(batch_index)
+    
+    def _deform_current_frames(self, batch_index):
+        frame_index = int(self._batch_videos_frame_index[batch_index])
+        deformed_frame, deformed_landmarks = deform(
+            self._batch_deformed_frames[batch_index],
+            self._batch_deformed_landmarks[batch_index],
+            self._batch_source_landmarks[frame_index-1],
+            self._batch_source_landmarks[frame_index]
+        )
+        self._batch_deformed_frames[batch_index] = deformed_frame
+        self._batch_deformed_landmarks[batch_index] = deformed_landmarks
+    
+    def _compute_current_displacements(self, batch_index):
+        frame_index = int(self._batch_videos_frame_index[batch_index])
+        displacements = compute_displacements_interpolation(
+            self._batch_source_landmarks[frame_index-1],
+            self._batch_source_landmarks[frame_index],
+            self.width,
+            self.height,
+            1)
+        self._batch_displacements[batch_index] = displacements
+    
+    def generate_next_frames(self):
+        generated_frames = self._batch_zero_aray()
+        current_frames = self._batch_zero_aray()
+        previously_generated_frames = self._batch_zero_aray()
         for batch_index in range(self.batch_size):
-            if self._video_has_two_next_frames(batch_index):
-                self._batch_videos_frame_index[batch_index] += 1
-            else: 
-                self._load_next_video(batch_index)
+            self._deform_current_frames(batch_index)
+            self._compute_current_displacements(batch_index)
+            l = [
+                self._first_frame(batch_index),
+                self._batch_deformed_frames[batch_index],
+                self._batch_previously_generated_frames[batch_index],
+                self._batch_displacements[batch_index]
+                 ]
+            previously_generated_frames[batch_index] = self._batch_previously_generated_frames[batch_index]
+            generated_frame = self.generator(l)
+            generated_frames[batch_index] = generated_frame
+            current_frames[batch_index] = self._get_frame(batch_index)
+            self._load_next_frames(batch_index, generated_frame)
+        return previously_generated_frames, generated_frames, current_frames
     
-    def _get_batch(self):
-        batch_previous_frame = []
-        batch_current_frame = []
-        batch_next_frame = []
-        for i in range(self.batch_size):
-            previous_frame, current_frame, next_frame = self._get_next_frames()
-            batch_previous_frame.append(previous_frame)
-            batch_current_frame.append(current_frame)
-            batch_next_frame.append(next_frame)
-        return np.array(batch_previous_frame), np.array(batch_current_frame), np.array(batch_next_frame)
+    def next_loss(self):
+        previously_generated_frames, generated_frames, current_frames = self.generate_next_frames()
+        previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previously_generated_frames)
+        current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
+        previous_frames = self._get_frames(-1)
+        disc_real_output = self.discriminator([previous_frames, current_frames], training=True)
+        disc_generated_output = self.discriminator([previously_generated_frames, generated_frames], training=True)
+        disc_loss_value = self.discriminator_loss_function(disc_real_output, disc_generated_output)
+        total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss = self.generator_loss_function(
+            disc_generated_output,
+            previously_generated_frames,
+            generated_frames,
+            previous_frames,
+            current_frames,
+            self._get_landmarks(-1),
+            self._get_landmarks(),
+            previous_gen_landmarks,
+            current_gen_landmarks
+        )        
+        return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss
 
-
-    def __next__(self):
-        return self._get_batch()
-    
-    def __call__(self):
-        return next(self)
-    
-    def take(self, n):
-        for i in range(n+1): # Frame index start at one
-            try:
-                yield self()
-            except StopIteration:
-                self._restart()
-    
-    def __iter__(self):
-        return self
-    
-    def repeat(self):
-        while True:
-            try:
-                yield self()
-            except StopIteration:
-                self._restart()
