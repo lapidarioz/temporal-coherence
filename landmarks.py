@@ -1,4 +1,4 @@
-from settings.facial import DEFAULT_LANDMARKS
+from settings.facial import LOW_DEFAUlT_LANDMARKS, HIGH_DEFAULT_LANDMARKS
 import numpy as np
 import tensorflow as tf
 import mediapipe as mp
@@ -10,14 +10,10 @@ from normalize import images_from_normalized
 # TODO: change to worst case landmarks
 # e.g. maximize the distance between landmarks for odd and even frames
 def get_default_landmarks(i=None):
-    landmarks = np.array(DEFAULT_LANDMARKS, dtype=np.float32)
-    if i is None:
-        landmarks = landmarks + tf.random.uniform(landmarks.shape, -0.1, 0.1)
-    elif i % 2 == 0:
-            landmarks = landmarks + -0.1
-    else:
-        landmarks = landmarks + 0.1
-    return np.moveaxis(landmarks, 0, 1)
+    landmarks = np.array(LOW_DEFAUlT_LANDMARKS, dtype=np.float32)
+    if (i is not None) and (i % 2 == 1):
+        landmarks = np.array(HIGH_DEFAULT_LANDMARKS, dtype=np.float32)
+    return landmarks
 
 class LandmarkDetector():
 
@@ -48,11 +44,11 @@ class MediapipeLandmarkDetector(LandmarkDetector):
         images =  images_from_normalized(images)
         images = np.array(images, dtype=np.uint8)
         all_landmarks = []
-        for image in images:
+        for i, image in enumerate(images):
             landmarks = []
             results = self.holistic_model.process(image)
             if results.face_landmarks is None:
-                landmarks = get_default_landmarks()
+                landmarks = get_default_landmarks(i)
             else:
                 for landmark in results.face_landmarks.landmark:
                     landmarks.append([landmark.x, landmark.y])
@@ -62,30 +58,29 @@ class MediapipeLandmarkDetector(LandmarkDetector):
         return np.array(all_landmarks, dtype=np.float32)
 
 
-def landmarks_to_array_dlib(landmarks):
-    x = []
-    y = []
-    for current_landmarks in landmarks:
-        x.append(current_landmarks.x)
-        y.append(current_landmarks.y)
-    return np.array([x, y])
+def dlib_landmarks_to_array(dlib_landmarks):
+    landmarks = []
+    for current_landmarks in dlib_landmarks:
+        landmarks.append([current_landmarks.x, current_landmarks.y])
+    return np.array(landmarks)
 
 class DlibLandmarksDetector(LandmarkDetector):
 
     def preprocess_and_detect_landmarks_numpy(self, images):
         clip_landmarks = []
-        for frame in images:
+        for i, frame in enumerate(images):
             frame =  images_from_normalized(frame)
             frame = np.array(frame, dtype=np.uint8)
             # Only considering the first face
             faces = face_recognition.api._raw_face_landmarks(face_image=frame)
             if len(faces) > 0:
-                landmarks_array = landmarks_to_array_dlib(faces[0].parts())
-                clip_landmarks.append(landmarks_array) # TODO: fix to work with batch size > 1
+                landmarks_array = dlib_landmarks_to_array(faces[0].parts())
             else:
-                clip_landmarks.append(get_default_landmarks())
+                height, width = frame.shape[:2]
+                landmarks_array = get_default_landmarks(i)
+                landmarks_array = landmarks_array * np.array([width, height])
+            clip_landmarks.append(landmarks_array)
         clip_landmarks = np.array(clip_landmarks)
-        clip_landmarks = np.moveaxis(clip_landmarks, 1, 2)
         return np.ndarray.astype(clip_landmarks, dtype=np.float32)
 
 
