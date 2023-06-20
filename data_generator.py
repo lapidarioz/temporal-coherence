@@ -249,7 +249,6 @@ class MultipleVideoDataGenerator():
     def _load_batch_video(self, batch_index):
         self._batch_videos[batch_index] = np.load(self.videos_path[self._batch_videos_index[batch_index]])
         if self._video_has_next_frames(batch_index):
-            l = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self._batch_videos[batch_index])
             self._batch_landmarks[batch_index] = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self._batch_videos[batch_index])
             self._batch_deformed_frames[batch_index] = self._first_frame(batch_index) # first frame as input
             self._batch_deformed_landmarks[batch_index] = self._first_landmarks(batch_index)
@@ -290,13 +289,16 @@ class MultipleVideoDataGenerator():
         self._batch_previously_generated_frames = self._batch_image_zeros()
         self._batch_displacements = self._batch_displacements_zeros()
         self._load_batch_videos()
+    
+    def _frame_index(self, batch_index, frame_shift=0):
+        return self._batch_videos_frame_index[batch_index]+frame_shift
 
-    def _load_item(self, array, batch_index, frame_shift):
-        frame_index = self._batch_videos_frame_index[batch_index]+frame_shift
+    def _get_item(self, array, batch_index, frame_shift):
+        frame_index = self._frame_index(batch_index, frame_shift)
         return array[batch_index][frame_index]
     
     def _get_frame(self, batch_index, frame_shift=0):
-        return self._load_item(self._batch_videos, batch_index, frame_shift)
+        return self._get_item(self._batch_videos, batch_index, frame_shift)
     
     def _get_frames(self, frame_shift=0):
         frames = self._batch_image_zeros()
@@ -305,7 +307,7 @@ class MultipleVideoDataGenerator():
         return frames
     
     def _get_landmark(self, batch_index, frame_shift=0):
-        return self._load_item(self._batch_landmarks, batch_index, frame_shift)
+        return self._get_item(self._batch_landmarks, batch_index, frame_shift)
     
     def _get_landmarks(self, frame_shift=0):
         landmarks = self._batch_landmarks_zeros()
@@ -320,7 +322,8 @@ class MultipleVideoDataGenerator():
         return self._batch_landmarks[batch_index][0]
     
     def _video_has_next_frames(self, batch_index):
-        return self._batch_videos_index[batch_index]+1 < self._batch_videos[batch_index].shape[0]
+        frame_index = self._frame_index(batch_index,1)
+        return frame_index < self._batch_videos[batch_index].shape[0]
     
     def _load_next_video(self, batch_index):
         while (True): # load next video with frames
@@ -337,7 +340,7 @@ class MultipleVideoDataGenerator():
             self._load_next_video(batch_index)
     
     def _deform_current_frames(self, batch_index):
-        frame_index = self._batch_videos_frame_index[batch_index]
+        frame_index = self._frame_index(batch_index)
         deformed_frame, deformed_landmarks = deform(
             self._batch_deformed_frames[batch_index],
             self._batch_deformed_landmarks[batch_index],
@@ -348,7 +351,7 @@ class MultipleVideoDataGenerator():
         self._batch_deformed_landmarks[batch_index] = deformed_landmarks
     
     def _compute_current_displacements(self, batch_index):
-        frame_index = self._batch_videos_frame_index[batch_index]
+        frame_index = self._frame_index(batch_index)
         displacements = compute_displacements_interpolation(
             self._batch_source_landmarks[batch_index][frame_index-1],
             self._batch_source_landmarks[batch_index][frame_index],
@@ -392,10 +395,14 @@ class MultipleVideoDataGenerator():
         return previously_generated_frames, generated_frames, current_frames
     
     def next_loss(self):
+        # get frames and landmarks before generating next frames
+        previous_frames = self._get_frames(-1)
+        previous_landmarks = self._get_landmarks(-1)
+        current_landmarks = self._get_landmarks()
+        # generate_next_frames loads the next frames
         previously_generated_frames, generated_frames, current_frames = self.generate_next_frames()
         previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previously_generated_frames)
         current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
-        previous_frames = self._get_frames(-1)
         disc_real_output = self.discriminator([previous_frames, current_frames], training=True)
         disc_generated_output = self.discriminator([previously_generated_frames, generated_frames], training=True)
         disc_loss_value = self.discriminator_loss_function(disc_real_output, disc_generated_output)
@@ -405,20 +412,22 @@ class MultipleVideoDataGenerator():
             generated_frames,
             previous_frames,
             current_frames,
-            self._get_landmarks(-1),
-            self._get_landmarks(),
+            previous_landmarks,
+            current_landmarks,
             previous_gen_landmarks,
             current_gen_landmarks
         )        
         return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss
     
     def next_plot(self):
-        previously_generated_frames, generated_frames, current_frames, first_frames, deformed_frames, displacements = self._get_all_inputs()
-        previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previously_generated_frames)
-        current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
+        # get frames and landmarks before generating next frames
         previous_frames = self._get_frames(-1)
         previous_landmarks = self._get_landmarks(-1)
         current_landmarks = self._get_landmarks()
+        # _get_all_inputs loads the next frames
+        previously_generated_frames, generated_frames, current_frames, first_frames, deformed_frames, displacements = self._get_all_inputs()
+        previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previously_generated_frames)
+        current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
         tf.print("previously_generated_frames")
         plot_normalized_sequence(previously_generated_frames)
         tf.print("generated_frames")
