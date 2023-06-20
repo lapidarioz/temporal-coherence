@@ -1,6 +1,7 @@
 
 from landmarks import DlibLandmarksDetector
 import numpy as np
+import tensorflow as tf
 from landmarks import compute_displacements_interpolation
 from transformation import deform
 from plot import plot_normalized_sequence, plot_landmarks
@@ -248,6 +249,7 @@ class MultipleVideoDataGenerator():
     def _load_batch_video(self, batch_index):
         self._batch_videos[batch_index] = np.load(self.videos_path[self._batch_videos_index[batch_index]])
         if self._video_has_next_frames(batch_index):
+            l = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self._batch_videos[batch_index])
             self._batch_landmarks[batch_index] = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self._batch_videos[batch_index])
             self._batch_deformed_frames[batch_index] = self._first_frame(batch_index) # first frame as input
             self._batch_deformed_landmarks[batch_index] = self._first_landmarks(batch_index)
@@ -272,14 +274,17 @@ class MultipleVideoDataGenerator():
     def _batch_displacements_zeros(self):
         return np.zeros((self.batch_size, self.height, self.width, 1))
     
+    def empty_list_batch(self):
+        return [None] * self.batch_size
+    
     def _restart(self):
         self._batch_videos_index = np.zeros(self.batch_size, dtype=int)
         self._batch_next_video_index = 0
         self._batch_videos_frame_index = np.ones(self.batch_size, dtype=int)
-        self._batch_videos = [None] * self.batch_size
-        self._batch_landmarks = [None] * self.batch_size
-        self._batch_source_videos = [None] * self.batch_size
-        self._batch_source_landmarks = [None] * self.batch_size
+        self._batch_videos = self.empty_list_batch()
+        self._batch_landmarks = self.empty_list_batch()
+        self._batch_source_videos = self.empty_list_batch()
+        self._batch_source_landmarks = self.empty_list_batch()
         self._batch_deformed_frames = self._batch_image_zeros()
         self._batch_deformed_landmarks = self._batch_landmarks_zeros()
         self._batch_previously_generated_frames = self._batch_image_zeros()
@@ -414,26 +419,26 @@ class MultipleVideoDataGenerator():
         previous_frames = self._get_frames(-1)
         previous_landmarks = self._get_landmarks(-1)
         current_landmarks = self._get_landmarks()
-        print("previously_generated_frames")
+        tf.print("previously_generated_frames")
         plot_normalized_sequence(previously_generated_frames)
-        print("generated_frames")
+        tf.print("generated_frames")
         plot_normalized_sequence(generated_frames)
-        print("current_frames")
+        tf.print("current_frames")
         plot_normalized_sequence(current_frames)
-        print("previous_frames")
+        tf.print("previous_frames")
         plot_normalized_sequence(previous_frames)
-        print("first_frames")
+        tf.print("first_frames")
         plot_normalized_sequence(first_frames)
-        print("deformed_frames")
+        tf.print("deformed_frames")
         plot_normalized_sequence(deformed_frames)
-        print("displacements")
+        tf.print("displacements")
         plot_normalized_sequence(displacements)
-        print("previous_gen_landmarks")
+        tf.print("previous_gen_landmarks")
         plot_landmarks(previously_generated_frames, previous_gen_landmarks)
-        print("current_gen_landmarks")
+        tf.print("current_gen_landmarks")
         plot_landmarks(generated_frames, current_gen_landmarks)
-        print("previous_landmarks")
+        tf.print("previous_landmarks")
         plot_landmarks(previous_frames, previous_landmarks)
-        print("current_landmarks")
+        tf.print("current_landmarks")
         plot_landmarks(current_frames, current_landmarks)
 
