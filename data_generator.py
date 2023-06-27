@@ -451,3 +451,131 @@ class MultipleVideoDataGenerator():
         tf.print("current_landmarks")
         plot_landmarks(current_frames, current_landmarks)
 
+
+class PreprocessedDataGenerator():
+
+    def __init__(self, videos_path, generator, discriminator, generator_loss_function, discriminator_loss_function, batch_size=1, landmark_detector=None):
+        if landmark_detector:
+            self.landmark_detector = landmark_detector
+        else:
+            self.landmark_detector = DlibLandmarksDetector()
+        self.generator = generator
+        self.discriminator = discriminator
+        self.generator_loss_function = generator_loss_function
+        self.discriminator_loss_function = discriminator_loss_function
+        self.videos_path = videos_path
+        self.n = len(videos_path)
+        self._restart()
+        self.batch_size = batch_size
+        self.stop_iteration = False
+    
+    def _restart(self):
+        self.current_video_index = 0
+        self.current_frame_index = 0
+        self._load_current_video()
+        self.height = self.current_video.shape[1]
+        self.width = self.current_video.shape[2]
+        self.last_generated_frame = self._first_frame()
+    
+    def _load_current_video(self):
+        self.current_video = np.load(self.videos_path[self.current_video_index])
+        self._current_source_video = self.current_video # TODO: change this to the most similar video
+        self._landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self.current_video)
+        self._current_source_landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self._current_source_video)
+    
+    def _load_next_video(self):
+        self.current_frame_index = 1
+        self.current_video_index += 1
+        self._load_current_video()
+
+    def _first_frame(self):
+        return self.current_video[0]
+
+    def _first_landmarks(self):
+        return self._landmarks[0]
+    
+    def _range_current_video(self):
+        return range(len(self._current_source_video))
+
+    def _deform_current_video(self):
+        self._deformed_frames = np.zeros_like(self.current_video)
+        for i in self._range_current_video():
+             self._deformed_frames[i], _ = deform(
+                self._first_frame(),
+                self._first_landmarks(),
+                self._current_source_landmarks[0],
+                self._current_source_landmarks[i]
+            )
+    
+    def _compute_current_displacements(self):
+        self.displacements = compute_displacements_interpolation(
+            self._current_source_landmarks[:-1],
+            self._current_source_landmarks[1:],
+            self.width,
+            self.height,
+            self.batch_size)
+        
+    def n_first_frames(self, n):
+        return np.array([self._first_frame() for _ in range(n)])
+    
+    def has_next_video(self):
+        return self.current_video_index < self.n - 1
+    
+    def _get_all_inputs(self):
+        if self.stop_iteration:
+            raise StopIteration
+        
+        current_frames = self.current_video[self.current_frame_index:self.current_frame_index+self.batch_size]
+        current_landmarks = self._landmarks[self.current_frame_index:self.current_frame_index+self.batch_size]
+        first_frames = self.n_first_frames(len(current_frames))
+        deformed_frames = self._deformed_frames[self.current_frame_index:self.current_frame_index+self.batch_size]
+        displacements = self.displacements[self.current_frame_index:self.current_frame_index+self.batch_size]
+        previous_frames = self.current_video[self.current_frame_index-1:self.current_frame_index-1+self.batch_size]
+        previous_landmarks = self._landmarks[self.current_frame_index-1:self.current_frame_index-1+self.batch_size]
+        self.current_frame_index += len(current_frames)
+        while len(current_frames) < self.batch_size:
+            if self.has_next_video():
+                self._load_next_video()
+                n_frames = len(current_frames)
+                n_remaning = self.batch_size - n_frames
+                current_frames = np.concatenate([current_frames, self.current_video[self.current_frame_index:self.current_frame_index+n_remaning]])
+                current_landmarks = np.concatenate([current_landmarks, self._landmarks[self.current_frame_index:self.current_frame_index+n_remaning]])
+                previous_frames = np.concatenate([previous_frames, self.current_video[self.current_frame_index-1:self.current_frame_index-1+n_remaning]])
+                previous_landmarks = np.concatenate([previous_landmarks, self._landmarks[self.current_frame_index-1:self.current_frame_index-1+n_remaning]])
+                deformed_frames = np.concatenate([deformed_frames, self._deformed_frames[self.current_frame_index:self.current_frame_index+n_remaning]])
+                displacements = np.concatenate([displacements, self.displacements[self.current_frame_index:self.current_frame_index+n_remaning]])
+                n_added_frames = len(current_frames) - n_frames
+                first_frames = np.concatenate([first_frames, self.n_first_frames(n_added_frames)])
+                self.current_frame_index += n_added_frames
+            else:
+                self._restart()
+                self.stop_iteration = True
+        
+        generated_frames = self.generator([first_frames, deformed_frames, displacements])
+        previous_generated_frames = np.concatenate(self.last_generated_frame, generated_frames[:-1])
+        self.last_generated_frame = generated_frames[-1]
+        return previous_frames, current_frames, previous_landmarks, current_landmarks, previous_generated_frames, generated_frames
+
+    def generate_next_batch(self):
+        _, current_frames, _, _, previous_generated_frames, generated_frames = self._get_all_inputs()
+        return previous_generated_frames, generated_frames, current_frames
+    
+    def next_loss(self):
+        previous_frames, current_frames, previous_landmarks, current_landmarks, previous_generated_frames, generated_frames = self._get_all_inputs()
+        previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_generated_frames)
+        current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
+        disc_real_output = self.discriminator([previous_frames, current_frames], training=True)
+        disc_generated_output = self.discriminator([previous_generated_frames, generated_frames], training=True)
+        disc_loss_value = self.discriminator_loss_function(disc_real_output, disc_generated_output)
+        total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss = self.generator_loss_function(
+            disc_generated_output,
+            previous_generated_frames,
+            generated_frames,
+            previous_frames,
+            current_frames,
+            previous_landmarks,
+            current_landmarks,
+            previous_gen_landmarks,
+            current_gen_landmarks
+        )        
+        return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss
