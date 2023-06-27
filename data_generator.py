@@ -536,26 +536,35 @@ class PreprocessedDataGenerator():
     def _get_all_inputs(self):
         if self.stop_iteration:
             raise StopIteration
-        batch_frames = self.current_video[self.current_frame_index:self.current_frame_index+self.batch_size]
-        batch_landmarks = self._landmarks[self.current_frame_index:self.current_frame_index+self.batch_size]
+        
+        begin_batch = self.current_frame_index
+        end_batch = begin_batch+self.batch_size
+        begin_previous = begin_batch-1
+        batch_frames = self.current_video[begin_batch:end_batch]
+        batch_landmarks = self._landmarks[begin_batch:end_batch]
         batch_first_frames = self.n_first_frames(len(batch_frames))
-        batch_deformed_frames = self._deformed_frames[self.current_frame_index:self.current_frame_index+self.batch_size]
-        batch_displacements = self.displacements[self.current_frame_index:self.current_frame_index+self.batch_size]
-        batch_previous_frames = self.current_video[self.current_frame_index-1:self.current_frame_index-1+self.batch_size]
-        batch_previous_landmarks = self._landmarks[self.current_frame_index-1:self.current_frame_index-1+self.batch_size]
+        batch_deformed_frames = self._deformed_frames[begin_batch:end_batch]
+        batch_displacements = self.displacements[begin_batch:end_batch]
+        end_previous = begin_previous+len(batch_frames)
+        batch_previous_frames = self.current_video[begin_previous:end_previous]
+        batch_previous_landmarks = self._landmarks[begin_previous:end_previous]
         self.current_frame_index += len(batch_frames)
         while len(batch_frames) < self.batch_size:
             if self.has_next_video():
                 self._load_next_video()
                 n_frames = len(batch_frames)
                 n_remaning = self.batch_size - n_frames
-                batch_frames = np.concatenate([batch_frames, self.current_video[self.current_frame_index:self.current_frame_index+n_remaning]])
-                batch_landmarks = np.concatenate([batch_landmarks, self._landmarks[self.current_frame_index:self.current_frame_index+n_remaning]])
-                batch_previous_frames = np.concatenate([batch_previous_frames, self.current_video[self.current_frame_index-1:self.current_frame_index-1+n_remaning]])
-                batch_previous_landmarks = np.concatenate([batch_previous_landmarks, self._landmarks[self.current_frame_index-1:self.current_frame_index-1+n_remaning]])
-                batch_deformed_frames = np.concatenate([batch_deformed_frames, self._deformed_frames[self.current_frame_index:self.current_frame_index+n_remaning]])
-                batch_displacements = np.concatenate([batch_displacements, self.displacements[self.current_frame_index:self.current_frame_index+n_remaning]])
+                begin_batch = self.current_frame_index
+                end_batch = begin_batch+n_remaning
+                begin_previous = begin_batch-1
+                batch_frames = np.concatenate([batch_frames, self.current_video[begin_batch:end_batch]])
+                batch_landmarks = np.concatenate([batch_landmarks, self._landmarks[begin_batch:end_batch]])
+                batch_deformed_frames = np.concatenate([batch_deformed_frames, self._deformed_frames[begin_batch:end_batch]])
+                batch_displacements = np.concatenate([batch_displacements, self.displacements[begin_batch:end_batch]])
                 n_added_frames = len(batch_frames) - n_frames
+                end_previous = begin_previous+n_added_frames
+                batch_previous_frames = np.concatenate([batch_previous_frames, self.current_video[begin_previous:end_previous]])
+                batch_previous_landmarks = np.concatenate([batch_previous_landmarks, self._landmarks[begin_previous:end_previous]])
                 batch_first_frames = np.concatenate([batch_first_frames, self.n_first_frames(n_added_frames)])
                 self.current_frame_index += n_added_frames
             else:
@@ -566,6 +575,7 @@ class PreprocessedDataGenerator():
         generated_frames = self.generator([batch_first_frames, batch_deformed_frames, batch_displacements])
         previous_generated_frames = np.concatenate([self.last_generated_frame, generated_frames[:-1]])
         self.last_generated_frame = generated_frames[-1:]
+
         return batch_previous_frames, batch_frames, batch_previous_landmarks, batch_landmarks, previous_generated_frames, generated_frames
 
     def generate_next_batch(self):
