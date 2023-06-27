@@ -84,12 +84,7 @@ class DlibLandmarksDetector(LandmarkDetector):
         return np.ndarray.astype(clip_landmarks, dtype=np.float32)
 
 
-def compute_displacements_interpolation(points_a, points_b, image_width, image_height, batch_size, fill_value=0):
-    points_a = np.asarray(points_a)
-    points_b = np.asarray(points_b)
-    points_a = np.reshape(points_a, (batch_size, -1, 2))
-    points_b = np.reshape(points_b, (batch_size, -1, 2))
-
+def compute_displacements_interpolation(points_a, points_b, image_width, image_height, fill_value=0):
     all_displacements_map = []
     for pa, pb in zip(points_a, points_b):
         displacements_values = np.linalg.norm(pb - pa, axis=1)
@@ -102,9 +97,7 @@ def compute_displacements_interpolation(points_a, points_b, image_width, image_h
         displacements_map_b = interpolator_b(X, Y)
         displacements_map = np.mean([displacements_map_a, displacements_map_b], axis=0)
         all_displacements_map.append(displacements_map)
-    all_displacements_map = np.array(all_displacements_map, dtype=np.float32)
-    all_displacements_map = np.moveaxis(all_displacements_map, 0, -1)
-    return all_displacements_map
+    return np.array(all_displacements_map, dtype=np.float32)
 
 @tf.function
 def get_tensors_displacements(points_a, points_b, image_width, image_height, batch_size):
