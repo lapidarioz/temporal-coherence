@@ -482,6 +482,11 @@ class PreprocessedDataGenerator():
         self.current_frame_index = 1
         self._load_current_video()
         self.last_generated_frame = self.current_video[0:1]
+        # repeated first frame
+        self._first_batch_frames =  None
+        self._first_batch_first_frames =  None
+        self._first_batch_deformed_frames =  None
+        self._first_batch_displacements  =  None
     
     def _load_current_video(self):
         while True:
@@ -591,18 +596,41 @@ class PreprocessedDataGenerator():
         previous_generated_frames = np.concatenate([self.last_generated_frame, generated_frames[:-1]])
         self.last_generated_frame = generated_frames[-1:]
 
-        return batch_previous_frames, batch_frames, batch_previous_landmarks, batch_landmarks, previous_generated_frames, generated_frames
+        return (batch_previous_frames,
+                batch_frames,
+                batch_previous_landmarks,
+                batch_landmarks,
+                previous_generated_frames,
+                generated_frames,
+                batch_first_frames,
+                batch_deformed_frames,
+                batch_displacements)
 
     def generate_next_batch(self):
-        _, current_frames, _, _, previous_generated_frames, generated_frames = self._get_all_inputs()
+        _, current_frames, _, _, previous_generated_frames, generated_frames, _, _, _ = self._get_all_inputs()
         return previous_generated_frames, generated_frames, current_frames
     
     def generate_first_batch(self):
-        self._restart() # TODO: process input only once
-        return self.generate_next_batch()
+        if self._first_batch_frames is not None:
+            # self._restart()
+            (_,
+            self._first_batch_frames
+            ,_,_,
+            self._first_batch_first_frames,
+            self._first_batch_deformed_frames,
+            self._first_batch_displacements) = self._get_all_inputs()
+        generated_frames = self.generator([self._first_batch_first_frames, self._first_batch_deformed_frames, self._first_batch_displacements])
+        previous_generated_frames = np.concatenate([self.current_video[0:1], generated_frames[:-1]])
+        return previous_generated_frames, generated_frames, self._first_batch_frames
     
     def next_loss(self):
-        previous_frames, current_frames, previous_landmarks, current_landmarks, previous_generated_frames, generated_frames = self._get_all_inputs()
+        (previous_frames,
+        current_frames,
+        previous_landmarks,
+        current_landmarks,
+        previous_generated_frames,
+        generated_frames,
+        _, _, _) = self._get_all_inputs()
         previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_generated_frames)
         current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
         disc_real_output = self.discriminator([previous_frames, current_frames], training=True)
@@ -620,3 +648,38 @@ class PreprocessedDataGenerator():
             current_gen_landmarks
         )        
         return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss
+
+    def next_plot(self):
+        (previous_frames,
+        current_frames,
+        previous_landmarks,
+        current_landmarks,
+        previous_generated_frames,
+        generated_frames,
+        first_frames,
+        deformed_frames,
+        displacements) = self._get_all_inputs()
+        previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_generated_frames)
+        current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
+        tf.print("previous_generated_frames")
+        plot_normalized_sequence(previous_generated_frames)
+        tf.print("generated_frames")
+        plot_normalized_sequence(generated_frames)
+        tf.print("current_frames")
+        plot_normalized_sequence(current_frames)
+        tf.print("previous_frames")
+        plot_normalized_sequence(previous_frames)
+        tf.print("first_frames")
+        plot_normalized_sequence(first_frames)
+        tf.print("deformed_frames")
+        plot_normalized_sequence(deformed_frames)
+        tf.print("displacements")
+        plot_normalized_sequence(displacements)
+        tf.print("previous_gen_landmarks")
+        plot_landmarks(previous_generated_frames, previous_gen_landmarks)
+        tf.print("current_gen_landmarks")
+        plot_landmarks(generated_frames, current_gen_landmarks)
+        tf.print("previous_landmarks")
+        plot_landmarks(previous_frames, previous_landmarks)
+        tf.print("current_landmarks")
+        plot_landmarks(current_frames, current_landmarks)
