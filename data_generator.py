@@ -484,7 +484,12 @@ class PreprocessedDataGenerator():
         self.last_generated_frame = self.current_video[0:1]
     
     def _load_current_video(self):
-        self.current_video = np.load(self.videos_path[self.current_video_index])
+        while True:
+            self.current_video = np.load(self.videos_path[self.current_video_index])
+            if self._current_video_has_two_frames():
+                break
+            else:
+                self.current_video_index += 1
         self.height = self.current_video.shape[1]
         self.width = self.current_video.shape[2]
         self._current_source_video = self.current_video # TODO: change this to the most similar video
@@ -530,8 +535,14 @@ class PreprocessedDataGenerator():
     def n_first_frames(self, n):
         return np.array([self._first_frame() for _ in range(n)])
     
-    def has_next_video(self):
+    def _has_next_video(self):
         return self.current_video_index < self.n - 1
+    
+    def _current_video_has_two_frames(self):
+        return len(self.current_video) > 2
+
+    def _current_video_has_next_frame(self):
+        return self.current_frame_index < len(self.current_video)
     
     def _get_all_inputs(self):
         if self.stop_iteration:
@@ -549,24 +560,42 @@ class PreprocessedDataGenerator():
         batch_previous_frames = self.current_video[begin_previous:end_previous]
         batch_previous_landmarks = self._landmarks[begin_previous:end_previous]
         self.current_frame_index += len(batch_frames)
+        tf.print("FIRST")
+        tf.print("video_path", self.videos_path[self.current_video_index])
+        tf.print("batch_frames", batch_frames.shape)
+        tf.print("batch_first_frames", batch_first_frames.shape)
+        tf.print("len(batch_frames)", len(batch_frames))
+        tf.print("begin_batch", begin_batch)
+        tf.print("end_batch", end_batch)
+        tf.print()
         while len(batch_frames) < self.batch_size:
-            if self.has_next_video():
+            if self._has_next_video():
                 self._load_next_video()
-                n_frames = len(batch_frames)
-                n_remaning = self.batch_size - n_frames
-                begin_batch = self.current_frame_index
-                end_batch = begin_batch+n_remaning
-                begin_previous = begin_batch-1
-                batch_frames = np.concatenate([batch_frames, self.current_video[begin_batch:end_batch]])
-                batch_landmarks = np.concatenate([batch_landmarks, self._landmarks[begin_batch:end_batch]])
-                batch_deformed_frames = np.concatenate([batch_deformed_frames, self._deformed_frames[begin_batch:end_batch]])
-                batch_displacements = np.concatenate([batch_displacements, self.displacements[begin_batch:end_batch]])
-                n_added_frames = len(batch_frames) - n_frames
-                end_previous = begin_previous+n_added_frames
-                batch_previous_frames = np.concatenate([batch_previous_frames, self.current_video[begin_previous:end_previous]])
-                batch_previous_landmarks = np.concatenate([batch_previous_landmarks, self._landmarks[begin_previous:end_previous]])
-                batch_first_frames = np.concatenate([batch_first_frames, self.n_first_frames(n_added_frames)])
-                self.current_frame_index += n_added_frames
+                if self._current_video_has_two_frames():
+                    n_frames = len(batch_frames)
+                    n_remaning = self.batch_size - n_frames
+                    begin_batch = self.current_frame_index
+                    end_batch = begin_batch+n_remaning
+                    begin_previous = begin_batch-1
+                    batch_frames = np.concatenate([batch_frames, self.current_video[begin_batch:end_batch]])
+                    batch_landmarks = np.concatenate([batch_landmarks, self._landmarks[begin_batch:end_batch]])
+                    batch_deformed_frames = np.concatenate([batch_deformed_frames, self._deformed_frames[begin_batch:end_batch]])
+                    batch_displacements = np.concatenate([batch_displacements, self.displacements[begin_batch:end_batch]])
+                    n_added_frames = len(batch_frames) - n_frames
+                    tf.print("LOOP")
+                    tf.print("video_path", self.videos_path[self.current_video_index])
+                    tf.print("batch_frames", batch_frames.shape)
+                    tf.print("batch_first_frames", batch_first_frames.shape)
+                    tf.print("self.n_first_frames(n_added_frames)", self.n_first_frames(n_added_frames).shape)
+                    tf.print("n_added_frames", n_added_frames)
+                    tf.print("begin_batch", begin_batch)
+                    tf.print("end_batch", end_batch)
+                    tf.print()
+                    batch_first_frames = np.concatenate([batch_first_frames, self.n_first_frames(n_added_frames)])
+                    end_previous = begin_previous+n_added_frames
+                    batch_previous_frames = np.concatenate([batch_previous_frames, self.current_video[begin_previous:end_previous]])
+                    batch_previous_landmarks = np.concatenate([batch_previous_landmarks, self._landmarks[begin_previous:end_previous]])
+                    self.current_frame_index += n_added_frames
             else:
                 self._restart() # don't stop iteration in the middle of a batch
                 if not self.repeat:
