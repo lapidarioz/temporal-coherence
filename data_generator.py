@@ -597,6 +597,10 @@ class PreprocessedDataGenerator():
         _, current_frames, _, _, previous_generated_frames, generated_frames = self._get_all_inputs()
         return previous_generated_frames, generated_frames, current_frames
     
+    def generate_first_batch(self):
+        self._restart() # TODO: process input only once
+        return self.generate_next_batch()
+    
     def next_loss(self):
         previous_frames, current_frames, previous_landmarks, current_landmarks, previous_generated_frames, generated_frames = self._get_all_inputs()
         previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_generated_frames)
