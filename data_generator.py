@@ -611,17 +611,22 @@ class PreprocessedDataGenerator():
         return previous_generated_frames, generated_frames, current_frames
     
     def generate_first_batch(self):
-        if self._first_batch_frames is not None:
+        if self._first_batch_frames is None:
             # self._restart()
             (_,
-            self._first_batch_frames
-            ,_,_,
+            self._first_batch_frames,
+            _,
+            _,
+            previous_generated_frames,
+            generated_frames,
             self._first_batch_first_frames,
             self._first_batch_deformed_frames,
             self._first_batch_displacements) = self._get_all_inputs()
-        generated_frames = self.generator([self._first_batch_first_frames, self._first_batch_deformed_frames, self._first_batch_displacements])
-        previous_generated_frames = np.concatenate([self.current_video[0:1], generated_frames[:-1]])
-        return previous_generated_frames, generated_frames, self._first_batch_frames
+            return previous_generated_frames, generated_frames, self._first_batch_frames
+        else:
+            generated_frames = self.generator([self._first_batch_first_frames, self._first_batch_deformed_frames, self._first_batch_displacements])
+            previous_generated_frames = np.concatenate([self._first_batch_first_frames[0:1], generated_frames[:-1]])
+            return previous_generated_frames, generated_frames, self._first_batch_frames
     
     def next_loss(self):
         (previous_frames,
