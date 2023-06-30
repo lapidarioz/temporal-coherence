@@ -166,3 +166,53 @@ def get_generator_model_no_previous(img_width, img_height, n_channels):
     x = last(x)
 
     return tf.keras.Model(inputs=inputs, outputs=x)
+
+
+def get_generator_model_neutral(img_width, img_height, n_channels):
+    neutral = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], dtype=tf.float64, name='neutral_frame')
+    distances = tf.keras.layers.Input(shape=[img_width, img_height, 1], dtype=tf.float64, name='distances')
+    inputs = [neutral, distances]
+
+    down_stack = [
+        downsample(128, 4, 2, apply_batchnorm=False),  # (batch_size, frames_group_size, 32, 32, 128)
+        downsample(128, 4, 2),  # (batch_size, frames_group_size, 16, 16, 128)
+        downsample(256, 4, 2),  # (batch_size, frames_group_size, 8, 8, 256)
+        downsample(512, 4, 2),  # (batch_size, frames_group_size, 4, 4, 512)
+        downsample(512, 4, 2),  # (batch_size, frames_group_size, 2, 2, 512)
+    ]
+
+    up_stack = [
+        upsample(512, 4, 2, apply_dropout=False),  # (batch_size, frames_group_size, 4, 4, 512)
+        # upsample(512, 4, 2, apply_dropout=True),  # (batch_size, frames_group_size, 4, 4, 512)
+        upsample(256, 4, 2),  # (batch_size, frames_group_size, 8, 8, 256)
+        upsample(128, 4, 2),  # (batch_size, frames_group_size, 16, 16, 256)
+        upsample(128, 4, 2),  # (batch_size, frames_group_size, 32, 32, 128)
+    ]
+
+    initializer = tf.random_normal_initializer(0., 0.02)
+    last = tf.keras.layers.Conv2DTranspose(n_channels, 4,
+                                            strides=2,
+                                            padding='same',
+                                            kernel_initializer=initializer,
+                                            activation='tanh')  # (batch_size, , frames_group_size, 64, 64, 3)
+
+    
+    x = tf.keras.layers.concatenate(inputs)
+    # x = tf.keras.layers.concatenate([previous])
+
+    # Downsampling through the model
+    skips = []
+    for down in down_stack:
+        x = down(x)
+        skips.append(x)
+
+    skips = reversed(skips[:-1])
+
+    # Upsampling and establishing the skip connections
+    for up, skip in zip(up_stack, skips):
+        x = up(x)
+        x = tf.keras.layers.Concatenate()([x, skip])
+
+    x = last(x)
+
+    return tf.keras.Model(inputs=inputs, outputs=x)
