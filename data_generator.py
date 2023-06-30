@@ -790,7 +790,7 @@ class PreprocessedNeutralDataGenerator(PreprocessedDataGenerator):
         current_landmarks,
         previous_generated_frames,
         generated_frames,
-        _, _, _) = self._get_all_inputs()
+        _, _) = self._get_all_inputs()
         previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_generated_frames)
         current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
         disc_real_output = self.discriminator([previous_frames, current_frames], training=True)
