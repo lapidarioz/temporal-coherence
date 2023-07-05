@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 from normalize import images_from_normalized
 import tensorflow as tf
+import imageio
 
 def plot_sample_sequence(sample_sequence):
     plot_sequence = list(sample_sequence)
@@ -58,11 +59,20 @@ def plot_sequence_from_tensor(sample_sequence):
 def plot_sequence_from_normalized_tensor(sample_sequence):
     plot_sequence_from_tensor(images_from_normalized(sample_sequence))
 
+def plot_results_rgb(sample_target, gen_output):
+  display_list = [sample_target, gen_output]
+  title = ['Ground Truth', 'Predicted Sequence']
+
+  for i in range(len(display_list)):
+    tf.print(title[i])
+    display_list[i] = display_list[i]
+    plot_sequence(display_list[i])
+
 def plot_results(sample_target, sample_input, gen_output):
   display_list = [sample_input, sample_target, gen_output]
   title = ['Input Sequence', 'Ground Truth', 'Predicted Sequence']
 
-  for i in range(3):
+  for i in range(len(display_list)):
     tf.print(title[i])
     display_list[i] = display_list[i]
     plot_normalized_sequence(display_list[i])
@@ -89,3 +99,8 @@ def plot_landmarks(sample_sequence, landmarks):
     plt.show()
     plt.close()
     
+def save_gif(sample_sequence, path):
+    images = []
+    for i in range(sample_sequence.shape[0]):
+        images.append(images_from_normalized(sample_sequence[i]))
+    imageio.mimsave(path, images, fps=10)
