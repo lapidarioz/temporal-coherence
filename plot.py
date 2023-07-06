@@ -99,8 +99,8 @@ def plot_landmarks(sample_sequence, landmarks):
     plt.show()
     plt.close()
     
-def save_gif(sample_sequence, path):
+def save_gif(sample_sequence, path, fps=10):
     images = []
     for i in range(sample_sequence.shape[0]):
         images.append(images_from_normalized(sample_sequence[i]))
-    imageio.mimsave(path, images, fps=10)
+    imageio.mimwrite(path, images, fps=fps)
