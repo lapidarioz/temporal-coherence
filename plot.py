@@ -103,4 +103,4 @@ def save_gif(sample_sequence, path, fps=10):
     images = []
     for i in range(sample_sequence.shape[0]):
         images.append(images_from_normalized(sample_sequence[i]))
-    imageio.mimwrite(path, images, fps=fps)
+    imageio.mimwrite(str(path), images, fps=fps)
