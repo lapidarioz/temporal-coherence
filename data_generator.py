@@ -4,7 +4,8 @@ import numpy as np
 import tensorflow as tf
 from landmarks import compute_displacements_interpolation
 from transformation import deform
-from plot import plot_normalized_sequence, plot_landmarks
+from plot import plot_normalized_sequence, plot_landmarks, save_gif
+from pathlib import Path
 
 class FrameDataGenerator():
     
@@ -461,7 +462,8 @@ class PreprocessedDataGenerator():
                 discriminator_loss_function,
                 batch_size=1,
                 landmark_detector=None,
-                repeat=False):
+                repeat=False,
+                save_path=None):
         if landmark_detector:
             self.landmark_detector = landmark_detector
         else:
@@ -475,6 +477,7 @@ class PreprocessedDataGenerator():
         self.batch_size = batch_size
         self.stop_iteration = False
         self.repeat = repeat
+        self.save_path = save_path
         self._restart()
     
     def _restart(self):
@@ -503,6 +506,11 @@ class PreprocessedDataGenerator():
         self._current_source_landmarks = self._landmarks # TODO: change this to the most similar video
         self._deform_current_video()
         self._compute_current_displacements()
+    
+    @property
+    def name(self):
+        # return self.videos_path[self.current_video_index].split("/")[-1].split(".")[0]
+        return f"{self.current_video_index}_{self.current_frame_index}"
 
     def _load_next_video(self):
         self.current_frame_index = 1
@@ -666,28 +674,59 @@ class PreprocessedDataGenerator():
         displacements) = self._get_all_inputs()
         previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_generated_frames)
         current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
+        output_folder = None
+        if self.save_path:
+            output_folder = Path(self.save_path) / self.name
+            output_folder.mkdir(parents=True, exist_ok=True)
+            save_gif(generated_frames, output_folder / "generated.gif")
+            save_gif(current_frames, output_folder / "groundtruth.gif")
+            save_gif(deformed_frames, output_folder / "deformed.gif")
+            previous_generated_frames_path = output_folder / "previous_generated_frames.png"
+            generated_frames_path = output_folder / "generated_frames.png"
+            current_frames_path = output_folder / "current_frames.png"
+            previous_frames_path = output_folder / "previous_frames.png"
+            first_frames_path = output_folder / "first_frames.png"
+            deformed_frames_path = output_folder / "deformed_frames.png"
+            displacements_path = output_folder / "displacements.png"
+            previous_gen_landmarks_path = output_folder / "previous_gen_landmarks.png"
+            current_gen_landmarks_path = output_folder / "current_gen_landmarks.png"
+            previous_landmarks_path = output_folder / "previous_landmarks.png"
+            current_landmarks_path = output_folder / "current_landmarks.png"
+        else:
+            previous_generated_frames_path = None
+            generated_frames_path = None
+            current_frames_path = None
+            previous_frames_path = None
+            first_frames_path = None
+            deformed_frames_path = None
+            displacements_path = None
+            previous_gen_landmarks_path = None
+            current_gen_landmarks_path = None
+            previous_landmarks_path = None
+            current_landmarks_path = None
         tf.print("previous_generated_frames")
-        plot_normalized_sequence(previous_generated_frames)
+        plot_normalized_sequence(previous_generated_frames, previous_generated_frames_path)
         tf.print("generated_frames")
-        plot_normalized_sequence(generated_frames)
+        plot_normalized_sequence(generated_frames, generated_frames_path)
         tf.print("current_frames")
-        plot_normalized_sequence(current_frames)
+        plot_normalized_sequence(current_frames, current_frames_path)
         tf.print("previous_frames")
-        plot_normalized_sequence(previous_frames)
+        plot_normalized_sequence(previous_frames, previous_frames_path)
         tf.print("first_frames")
-        plot_normalized_sequence(first_frames)
+        plot_normalized_sequence(first_frames, first_frames_path)
         tf.print("deformed_frames")
-        plot_normalized_sequence(deformed_frames)
+        plot_normalized_sequence(deformed_frames, deformed_frames_path)
         tf.print("displacements")
-        plot_normalized_sequence(displacements)
+        plot_normalized_sequence(displacements, displacements_path)
         tf.print("previous_gen_landmarks")
-        plot_landmarks(previous_generated_frames, previous_gen_landmarks)
+        plot_landmarks(previous_generated_frames, previous_gen_landmarks, previous_gen_landmarks_path)
         tf.print("current_gen_landmarks")
-        plot_landmarks(generated_frames, current_gen_landmarks)
+        plot_landmarks(generated_frames, current_gen_landmarks, current_gen_landmarks_path)
         tf.print("previous_landmarks")
-        plot_landmarks(previous_frames, previous_landmarks)
+        plot_landmarks(previous_frames, previous_landmarks, previous_landmarks_path)
         tf.print("current_landmarks")
-        plot_landmarks(current_frames, current_landmarks)
+        plot_landmarks(current_frames, current_landmarks, current_landmarks_path)
+
 
 
 class PreprocessedNeutralDataGenerator(PreprocessedDataGenerator):
