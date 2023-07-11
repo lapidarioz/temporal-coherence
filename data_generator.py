@@ -681,17 +681,17 @@ class PreprocessedDataGenerator():
             save_gif(generated_frames, output_folder / "generated.gif")
             save_gif(current_frames, output_folder / "groundtruth.gif")
             save_gif(deformed_frames, output_folder / "deformed.gif")
-            previous_generated_frames_path = output_folder / "previous_generated_frames.png"
-            generated_frames_path = output_folder / "generated_frames.png"
-            current_frames_path = output_folder / "current_frames.png"
-            previous_frames_path = output_folder / "previous_frames.png"
-            first_frames_path = output_folder / "first_frames.png"
-            deformed_frames_path = output_folder / "deformed_frames.png"
-            displacements_path = output_folder / "displacements.png"
-            previous_gen_landmarks_path = output_folder / "previous_gen_landmarks.png"
-            current_gen_landmarks_path = output_folder / "current_gen_landmarks.png"
-            previous_landmarks_path = output_folder / "previous_landmarks.png"
-            current_landmarks_path = output_folder / "current_landmarks.png"
+            previous_generated_frames_path = output_folder / "previous_generated_frames.pdf"
+            generated_frames_path = output_folder / "generated_frames.pdf"
+            current_frames_path = output_folder / "current_frames.pdf"
+            previous_frames_path = output_folder / "previous_frames.pdf"
+            first_frames_path = output_folder / "first_frames.pdf"
+            deformed_frames_path = output_folder / "deformed_frames.pdf"
+            displacements_path = output_folder / "displacements.pdf"
+            previous_gen_landmarks_path = output_folder / "previous_gen_landmarks.pdf"
+            current_gen_landmarks_path = output_folder / "current_gen_landmarks.pdf"
+            previous_landmarks_path = output_folder / "previous_landmarks.pdf"
+            current_landmarks_path = output_folder / "current_landmarks.pdf"
         else:
             previous_generated_frames_path = None
             generated_frames_path = None
