@@ -2,6 +2,7 @@ from matplotlib import pyplot as plt
 from normalize import images_from_normalized
 import tensorflow as tf
 import imageio
+import numpy as np
 
 def plot_sample_sequence(sample_sequence, save_path=None):
     sequence = list(sample_sequence)
@@ -39,7 +40,7 @@ def sequence_generator(sample_sequence):
         yield sample_sequence[i, ...]
 
 def plot_sequence(sample_sequence, save_path=None):
-    plot_sample_sequence(sequence_generator(sample_sequence))
+    plot_sample_sequence(sequence_generator(sample_sequence), save_path=save_path)
 
 def inverse_sequence_generator(sample_sequence):
     for i in range(sample_sequence.shape[-1]):
@@ -63,14 +64,19 @@ def plot_sequence_from_tensor(sample_sequence):
 def plot_sequence_from_normalized_tensor(sample_sequence):
     plot_sequence_from_tensor(images_from_normalized(sample_sequence))
 
-def plot_results_rgb(sample_target, gen_output):
+def plot_results_rgb(sample_target, gen_output, save_path=None):
   display_list = [sample_target, gen_output]
   title = ['Ground Truth', 'Predicted Sequence']
 
+  plot_path = None
   for i in range(len(display_list)):
     tf.print(title[i])
     display_list[i] = display_list[i]
-    plot_sequence(display_list[i])
+    if save_path is not None:
+      plot_path = save_path / f"{title[i]}.pdf"
+      output_video_path = save_path / f"{title[i]}.npy"
+      np.save(output_video_path, display_list[i])
+    plot_sequence(display_list[i], save_path=save_path)
 
 def plot_results(sample_target, sample_input, gen_output, save_path=None):
   display_list = [sample_input, sample_target, gen_output]

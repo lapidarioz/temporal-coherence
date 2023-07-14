@@ -681,6 +681,9 @@ class PreprocessedDataGenerator():
             save_gif(generated_frames, output_folder / "generated.gif")
             save_gif(current_frames, output_folder / "groundtruth.gif")
             save_gif(deformed_frames, output_folder / "deformed.gif")
+            np.save(output_folder / "generated.npy", generated_frames)
+            np.save(output_folder / "groundtruth.npy", current_frames)
+            np.save(output_folder / "deformed.npy", deformed_frames)
             previous_generated_frames_path = output_folder / "previous_generated_frames.pdf"
             generated_frames_path = output_folder / "generated_frames.pdf"
             current_frames_path = output_folder / "current_frames.pdf"

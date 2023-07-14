@@ -23,3 +23,4 @@ mediapipe
 # git+https://github.com/andresprados/SPIGA.git
 # git+https://github.com/FacePerceiver/facer.git@main
 imageio
+pylops
