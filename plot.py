@@ -76,7 +76,7 @@ def plot_results_rgb(sample_target, gen_output, save_path=None):
       plot_path = save_path / f"{title[i]}.pdf"
       output_video_path = save_path / f"{title[i]}.npy"
       np.save(output_video_path, display_list[i])
-    plot_sequence(display_list[i], save_path=save_path)
+    plot_sequence(display_list[i], save_path=plot_path)
 
 def plot_results(sample_target, sample_input, gen_output, save_path=None):
   display_list = [sample_input, sample_target, gen_output]
@@ -85,7 +85,11 @@ def plot_results(sample_target, sample_input, gen_output, save_path=None):
   for i in range(len(display_list)):
     tf.print(title[i])
     display_list[i] = display_list[i]
-    plot_normalized_sequence(display_list[i], save_path=save_path)
+    if save_path is not None:
+      plot_path = save_path / f"{title[i]}.pdf"
+      output_video_path = save_path / f"{title[i]}.npy"
+      np.save(output_video_path, display_list[i])
+    plot_normalized_sequence(display_list[i], save_path=plot_path)
 
 def generate_sequences(model, sample_target, sample_input):
   prediction = model(sample_input, training=True)

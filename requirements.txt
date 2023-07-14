@@ -24,3 +24,4 @@ mediapipe
 # git+https://github.com/FacePerceiver/facer.git@main
 imageio
 pylops
+PyWavelets
