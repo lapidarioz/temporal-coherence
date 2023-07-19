@@ -76,6 +76,7 @@ def plot_results_rgb(sample_target, gen_output, save_path=None):
       plot_path = save_path / f"{title[i]}.pdf"
       output_video_path = save_path / f"{title[i]}.npy"
       np.save(output_video_path, display_list[i])
+      save_gif_rgb(display_list[i], save_path / f"sample_{title[i]}.gif")
     plot_sequence(display_list[i], save_path=plot_path)
 
 def plot_results(sample_target, sample_input, gen_output, save_path=None):
@@ -89,6 +90,7 @@ def plot_results(sample_target, sample_input, gen_output, save_path=None):
       plot_path = save_path / f"{title[i]}.pdf"
       output_video_path = save_path / f"{title[i]}.npy"
       np.save(output_video_path, display_list[i])
+      save_gif(display_list[i], save_path / f"sample_{title[i]}.gif")
     plot_normalized_sequence(display_list[i], save_path=plot_path)
 
 def generate_sequences(model, sample_target, sample_input):
@@ -120,3 +122,6 @@ def save_gif(sample_sequence, path):
     for i in range(sample_sequence.shape[0]):
         images.append(images_from_normalized(sample_sequence[i]))
     imageio.mimwrite(str(path), images)
+
+def save_gif_rgb(sample_sequence, path):
+    imageio.mimwrite(str(path), sample_sequence)
