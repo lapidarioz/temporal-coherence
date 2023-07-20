@@ -113,3 +113,36 @@ def get_tensor_display_displacements_from_images(images_a, images_b, landmark_de
     points_a = landmark_detector.preprocess_and_detect_landmarks(images_a)
     points_b = landmark_detector.preprocess_and_detect_landmarks(images_b)
     return get_tensors_displacements(points_a, points_b, image_width, image_height, batch_size)
+
+def add_boundary_points(points, height, width):
+    bp = np.array(
+        [(0, 0),
+         (width / 6, 0),
+         (width / 3, 0),
+         (width / 2, 0),
+         (2 * width / 3, 0),
+         (5 * width / 6, 0),
+         (width - 1, 0),
+         (width - 1, height / 6),
+         (width - 1, height / 3),
+         (width - 1, height / 2),
+         (width - 1, 2 * height / 3),
+         (width - 1, 5 * height / 6),
+         (width - 1, height - 1),
+         (width / 6, height - 1),
+         (width / 3, height - 1),
+         (width / 2, height - 1),
+         (2 * width / 3, height - 1),
+         (5 * width / 6, height - 1),
+         (0, height - 1),
+         (0, height / 6),
+         (0, height / 3),
+         (0, height / 2),
+         (0, 2 * height / 3),
+         (0, 5 * height / 6),
+         ]).astype(int)
+    all_points  = []
+    for i in range(points.shape[0]):
+        p = np.concatenate((points[i], bp), axis=0)
+        all_points.append(p)
+    return np.array(all_points, dtype=np.float32)

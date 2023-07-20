@@ -675,6 +675,10 @@ class PreprocessedDataGenerator():
         displacements) = self._get_all_inputs()
         previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_generated_frames).numpy()
         current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames).numpy()
+        previous_landmarks = add_boundary_points(previous_landmarks, self.height, self.width)
+        current_landmarks = add_boundary_points(current_landmarks, self.height, self.width)
+        previous_gen_landmarks = add_boundary_points(previous_gen_landmarks, self.height, self.width)
+        current_gen_landmarks = add_boundary_points(current_gen_landmarks, self.height, self.width)
         previous_triangles = previous_landmarks[:, DEFAULT_TRIANGULATION]
         current_triangles = current_landmarks[:, DEFAULT_TRIANGULATION]
         previous_gen_triangles = previous_gen_landmarks[:, DEFAULT_TRIANGULATION]
