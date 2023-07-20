@@ -68,11 +68,6 @@ def get_new_landmarks(source_landmarks_previous, source_landmarks_current, targe
 
 def deform(input_image, input_landmarks, previous_source_landmarks, current_source_landmarks):
     input_landmarks = add_boundary_points(input_landmarks, input_image.shape[0], input_image.shape[1])
-    from scipy.spatial import Delaunay
-    input_landmarks = np.array(input_landmarks)
-    tri = Delaunay(input_landmarks)
-    print(tri.simplices)
-    raise Exception("STOP")
     previous_source_landmarks = add_boundary_points(previous_source_landmarks, input_image.shape[0], input_image.shape[1])
     current_source_landmarks = add_boundary_points(current_source_landmarks, input_image.shape[0], input_image.shape[1])
     input_triangles = input_landmarks[DEFAULT_TRIANGULATION]
