@@ -141,8 +141,12 @@ def add_boundary_points(points, height, width):
          (0, 2 * height / 3),
          (0, 5 * height / 6),
          ]).astype(int)
-    all_points  = []
-    for i in range(points.shape[0]):
-        p = np.concatenate((points[i], bp), axis=0)
-        all_points.append(p)
-    return np.array(all_points, dtype=np.float32)
+    if len(points.shape) == 2:
+        all_points = np.concatenate((points, bp), axis=0)
+        return np.ndarray.astype(all_points, dtype=np.float32)
+    else:
+        all_points  = []
+        for i in range(points.shape[0]):
+            p = np.concatenate((points[i], bp), axis=0)
+            all_points.append(p)
+        return np.array(all_points, dtype=np.float32)
