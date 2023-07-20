@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+from matplotlib.patches import Polygon
 from normalize import images_from_normalized
 import tensorflow as tf
 import imageio
@@ -86,6 +87,7 @@ def plot_results(sample_target, sample_input, gen_output, save_path=None):
   for i in range(len(display_list)):
     tf.print(title[i])
     display_list[i] = display_list[i]
+    plot_path = None
     if save_path is not None:
       plot_path = save_path / f"{title[i]}.pdf"
       output_video_path = save_path / f"{title[i]}.npy"
@@ -112,6 +114,28 @@ def plot_landmarks(sample_sequence, landmarks, save_path=None):
         ax.imshow(im)
         ax.scatter(landmarks[i, :, 0], landmarks[i, :, 1], s=10, c='r') 
         ax.axis('off')
+    if save_path is not None:
+        plt.savefig(save_path)
+    plt.show()
+    plt.close()
+
+def plot_triangles(sample_sequence, triangles, save_path=None):
+    plot_sequence = list(sample_sequence)
+    n_frames = len(plot_sequence)
+    if n_frames > 20:
+        plot_sequence = plot_sequence[:20]
+        n_frames = 20
+    rows = ((n_frames-1) // 10)+1
+    cols = max(n_frames % 10, 10)
+    fig = plt.figure(figsize=(20, 4))
+    for i, im in enumerate(plot_sequence):
+        ax = fig.add_subplot(rows,cols,i+1)
+        im = images_from_normalized(im)
+        ax.imshow(im)
+        ax.axis('off')
+        for triangle in triangles[i]:
+            polygon = Polygon(triangle, facecolor='r', fill=False)
+            ax.add_patch(polygon)
     if save_path is not None:
         plt.savefig(save_path)
     plt.show()

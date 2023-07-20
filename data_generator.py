@@ -1,11 +1,12 @@
 
-from landmarks import DlibLandmarksDetector
+from landmarks import DlibLandmarksDetector, add_boundary_points
 import numpy as np
 import tensorflow as tf
 from landmarks import compute_displacements_interpolation
 from transformation import deform
-from plot import plot_normalized_sequence, plot_landmarks, save_gif
+from plot import plot_normalized_sequence, plot_landmarks, plot_triangles, save_gif
 from pathlib import Path
+from settings.facial import DEFAULT_TRIANGULATION
 
 class FrameDataGenerator():
     
@@ -672,8 +673,12 @@ class PreprocessedDataGenerator():
         first_frames,
         deformed_frames,
         displacements) = self._get_all_inputs()
-        previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_generated_frames)
-        current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
+        previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_generated_frames).numpy()
+        current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames).numpy()
+        previous_triangles = previous_landmarks[:, DEFAULT_TRIANGULATION]
+        current_triangles = current_landmarks[:, DEFAULT_TRIANGULATION]
+        previous_gen_triangles = previous_gen_landmarks[:, DEFAULT_TRIANGULATION]
+        current_gen_triangles = current_gen_landmarks[:, DEFAULT_TRIANGULATION]
         if self.save_path:
             output_folder = Path(self.save_path) / self.name
             output_folder.mkdir(parents=True, exist_ok=True)
@@ -694,6 +699,10 @@ class PreprocessedDataGenerator():
             current_gen_landmarks_path = output_folder / "current_gen_landmarks.pdf"
             previous_landmarks_path = output_folder / "previous_landmarks.pdf"
             current_landmarks_path = output_folder / "current_landmarks.pdf"
+            previous_gen_triangles_path = output_folder / "previous_gen_triangles.pdf"
+            current_gen_triangles_path = output_folder / "current_gen_triangles.pdf"
+            previous_triangles_path = output_folder / "previous_triangles.pdf"
+            current_triangles_path = output_folder / "current_triangles.pdf"
         else:
             previous_generated_frames_path = None
             generated_frames_path = None
@@ -706,20 +715,24 @@ class PreprocessedDataGenerator():
             current_gen_landmarks_path = None
             previous_landmarks_path = None
             current_landmarks_path = None
-        tf.print("previous_generated_frames")
-        plot_normalized_sequence(previous_generated_frames, previous_generated_frames_path)
-        tf.print("generated_frames")
-        plot_normalized_sequence(generated_frames, generated_frames_path)
-        tf.print("current_frames")
-        plot_normalized_sequence(current_frames, current_frames_path)
-        tf.print("previous_frames")
-        plot_normalized_sequence(previous_frames, previous_frames_path)
-        tf.print("first_frames")
-        plot_normalized_sequence(first_frames, first_frames_path)
-        tf.print("deformed_frames")
-        plot_normalized_sequence(deformed_frames, deformed_frames_path)
-        tf.print("displacements")
-        plot_normalized_sequence(displacements, displacements_path)
+            previous_gen_triangles_path = None
+            current_gen_triangles_path = None
+            previous_triangles_path = None
+            current_triangles_path = None
+        # tf.print("previous_generated_frames")
+        # plot_normalized_sequence(previous_generated_frames, previous_generated_frames_path)
+        # tf.print("generated_frames")
+        # plot_normalized_sequence(generated_frames, generated_frames_path)
+        # tf.print("current_frames")
+        # plot_normalized_sequence(current_frames, current_frames_path)
+        # tf.print("previous_frames")
+        # plot_normalized_sequence(previous_frames, previous_frames_path)
+        # tf.print("first_frames")
+        # plot_normalized_sequence(first_frames, first_frames_path)
+        # tf.print("deformed_frames")
+        # plot_normalized_sequence(deformed_frames, deformed_frames_path)
+        # tf.print("displacements")
+        # plot_normalized_sequence(displacements, displacements_path)
         tf.print("previous_gen_landmarks")
         plot_landmarks(previous_generated_frames, previous_gen_landmarks, previous_gen_landmarks_path)
         tf.print("current_gen_landmarks")
@@ -728,7 +741,14 @@ class PreprocessedDataGenerator():
         plot_landmarks(previous_frames, previous_landmarks, previous_landmarks_path)
         tf.print("current_landmarks")
         plot_landmarks(current_frames, current_landmarks, current_landmarks_path)
-
+        # tf.print("current_triangles")
+        # plot_triangles(current_frames, current_triangles, current_triangles_path)
+        # tf.print("previous_triangles")
+        # plot_triangles(previous_frames, previous_triangles, previous_triangles_path)
+        # tf.print("current_gen_triangles")
+        # plot_triangles(generated_frames, current_gen_triangles, current_gen_triangles_path)
+        # tf.print("previous_gen_triangles")
+        # plot_triangles(previous_generated_frames, previous_gen_triangles, previous_gen_triangles_path)
 
 
 class PreprocessedNeutralDataGenerator(PreprocessedDataGenerator):
