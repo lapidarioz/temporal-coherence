@@ -136,11 +136,11 @@ def get_generator_model_no_previous(img_width, img_height, n_channels):
         downsample(512, 4),  # (batch_size, 8, 8, 512)
         downsample(512, 4),  # (batch_size, 4, 4, 512)
         downsample(512, 4),  # (batch_size, 2, 2, 512)
-        downsample(512, 4),  # (batch_size, 1, 1, 512)
+        # downsample(512, 4),  # (batch_size, 1, 1, 512)
     ]
 
     up_stack = [
-        upsample(512, 4, apply_dropout=True),  # (batch_size, 2, 2, 1024)
+        # upsample(512, 4, apply_dropout=True),  # (batch_size, 2, 2, 1024)
         upsample(512, 4, apply_dropout=True),  # (batch_size, 4, 4, 1024)
         upsample(512, 4, apply_dropout=True),  # (batch_size, 8, 8, 1024)
         upsample(512, 4),  # (batch_size, 16, 16, 1024)
