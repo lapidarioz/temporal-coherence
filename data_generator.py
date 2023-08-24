@@ -619,6 +619,10 @@ class PreprocessedDataGenerator():
         _, current_frames, _, _, previous_generated_frames, generated_frames, _, _, _ = self._get_all_inputs()
         return previous_generated_frames, generated_frames, current_frames
     
+    def generate_diff_batch(self):
+        previous_frames, current_frames, _, _, previous_generated_frames, generated_frames, _, _, _ = self._get_all_inputs()
+        return previous_generated_frames, generated_frames - previous_generated_frames, current_frames - previous_frames
+    
     def generate_first_batch(self):
         if self._first_batch_frames is None:
             # self._restart()
