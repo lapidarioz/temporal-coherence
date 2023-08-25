@@ -65,7 +65,7 @@ def coherence_mean_landmarks_loss(previous_y_true_landmarks, y_true_landmarks, p
   loss_pred = loss_function(previous_y_pred_landmarks, y_pred_landmarks)
   return tf.math.reduce_mean(tf.abs(loss_true - loss_pred))
 
-def perceptual_loss(y_true, y_pred):
+def perceptual_loss(y_true, y_pred, vgg):
     layer_name = 'block5_conv4'
     intermediate_layer_model = Model(inputs=vgg.input, outputs=vgg.get_layer(layer_name).output)
     return keras.losses.MSE(intermediate_layer_model(y_true), intermediate_layer_model(y_pred))
@@ -120,7 +120,7 @@ class GeneratorLoss(object):
             coherence_loss = 0
           
         if self.vgg:
-            landmarks_perceptual_loss = perceptual_loss(current_target_landmarks, current_gen_landmarks) * self.lambda_landmarks_perceptual_loss
+            landmarks_perceptual_loss = perceptual_loss(current_target, current_gen, self.vgg) * self.lambda_landmarks_perceptual_loss
         else:
             landmarks_perceptual_loss = 0
 
