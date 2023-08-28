@@ -59,4 +59,3 @@ def deblur_video(frames):
     deblurred_frames = tf.stack(deblurred_frames)
     deblurred_frames = tf.cast(deblurred_frames, tf.uint8)
     return deblurred_frames        
-        

@@ -70,6 +70,22 @@ def perceptual_loss(y_true, y_pred, vgg):
     intermediate_layer_model = Model(inputs=vgg.input, outputs=vgg.get_layer(layer_name).output)
     return keras.losses.MSE(intermediate_layer_model(y_true), intermediate_layer_model(y_pred))
 
+@tf.function
+def interpolate_frames(frame1, frame2, alpha=0.5):
+    return (1-alpha)*frame1 + alpha*frame2
+
+@tf.function
+def interpolate_landmarks(landmarks1, landmarks2, alpha=0.5):
+    return (1-alpha)*landmarks1 + alpha*landmarks2
+
+@tf.function
+def interpolation_loss(previous_gen, current_gen, previous_target, current_target, previous_gen_landmarks, current_gen_landmarks, previous_target_landmarks, current_target_landmarks, loss_function):
+    interpolated_gen = interpolate_frames(previous_gen, current_gen)
+    interpolated_target = interpolate_frames(previous_target, current_target)
+    interpolated_gen_landmarks = interpolate_landmarks(previous_gen_landmarks, current_gen_landmarks)
+    interpolated_target_landmarks = interpolate_landmarks(previous_target_landmarks, current_target_landmarks)
+    return loss_function(interpolated_target, interpolated_gen) + loss_function(interpolated_target_landmarks, interpolated_gen_landmarks)
+
 class GeneratorLoss(object):
 
     def __init__(self,
@@ -81,7 +97,9 @@ class GeneratorLoss(object):
                 lambda_landmarks_loss=1,
                 landmarks_coherence_loss_function=None,
                 lambda_landmarks_coherence_loss=1,
-                lambda_landmarks_perceptual_loss=None):
+                lambda_perceptual_loss=None,
+                interpolation_loss_function=None,
+                lambda_interpolation_loss=1):
         self.main_loss_function = main_loss_function
         self.lambda_main_loss = lambda_main_loss
         self.coherence_loss_function = coherence_loss_function
@@ -91,11 +109,13 @@ class GeneratorLoss(object):
         self.landmarks_coherence_loss_function = landmarks_coherence_loss_function
         self.lambda_landmarks_coherence_loss = lambda_landmarks_coherence_loss
         self.cross_entropy_loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-        self.lambda_landmarks_perceptual_loss = lambda_landmarks_perceptual_loss
-        if self.lambda_landmarks_perceptual_loss is not None:
+        self.lambda_perceptual_loss = lambda_perceptual_loss
+        if self.lambda_perceptual_loss is not None:
             self.vgg = VGG19(weights='imagenet', include_top=False)
         else:
             self.vgg = None
+        self.interpolation_loss_function = interpolation_loss_function
+        self.lambda_interpolation_loss = lambda_interpolation_loss
 
 
     def __call__(self,
@@ -121,10 +141,15 @@ class GeneratorLoss(object):
         else:
             coherence_loss = 0
           
-        if self.vgg is not None and self.lambda_landmarks_perceptual_loss is not None:
-            landmarks_perceptual_loss = perceptual_loss(current_target, current_gen, self.vgg) * self.lambda_landmarks_perceptual_loss
+        if self.vgg is not None and self.lambda_perceptual_loss is not None:
+            perceptual_loss_value = perceptual_loss(current_target, current_gen, self.vgg) * self.lambda_perceptual_loss
         else:
-            landmarks_perceptual_loss = 0
+            perceptual_loss_value = 0
+        
+        if self.interpolation_loss_function:
+            interpolation_loss_value = interpolation_loss(previous_gen, current_gen, previous_target, current_target, previous_gen_landmarks, current_gen_landmarks, previous_target_landmarks, current_target_landmarks, self.interpolation_loss_function) * self.lambda_interpolation_loss
+        else:
+            interpolation_loss_value = 0
 
         landmarks_loss = 0
         landmarks_coherence_loss = 0
@@ -145,9 +170,9 @@ class GeneratorLoss(object):
               self.landmarks_coherence_loss_function
             ) * self.lambda_landmarks_coherence_loss
 
-        total_gen_loss = gan_loss + main_loss + coherence_loss + landmarks_loss
+        total_gen_loss = gan_loss + main_loss + coherence_loss + landmarks_loss + landmarks_coherence_loss + perceptual_loss_value + interpolation_loss_value
 
-        return total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss
+        return total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, perceptual_loss_value, interpolation_loss_value
 
 
 
