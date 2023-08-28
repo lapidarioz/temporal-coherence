@@ -41,7 +41,8 @@ def get_discriminator_model(img_width, img_height, n_channels):
 
   inp = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], name='previous_frame')
   tar = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], name='current_frame')
-  inputs = [inp, tar]
+  diff = tf.keras.layers.Input(shape=[img_width, img_height, n_channels], name='difference')
+  inputs = [inp, tar, diff]
 
   x = tf.keras.layers.concatenate(inputs)  # (batch_size, 256, 256, channels*2)
 

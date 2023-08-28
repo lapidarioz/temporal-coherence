@@ -403,8 +403,10 @@ class MultipleVideoDataGenerator():
         previously_generated_frames, generated_frames, current_frames = self.generate_next_frames()
         previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previously_generated_frames)
         current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
-        disc_real_output = self.discriminator([previous_frames, current_frames], training=True)
-        disc_generated_output = self.discriminator([previously_generated_frames, generated_frames], training=True)
+        frames_diff = current_frames - generated_frames
+        generated_diff = generated_frames - previously_generated_frames
+        disc_real_output = self.discriminator([previous_frames, current_frames, frames_diff], training=True)
+        disc_generated_output = self.discriminator([previously_generated_frames, generated_frames, generated_diff], training=True)
         disc_loss_value = self.discriminator_loss_function(disc_real_output, disc_generated_output)
         total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss = self.generator_loss_function(
             disc_generated_output,
@@ -651,8 +653,10 @@ class PreprocessedDataGenerator():
         _, _, _) = self._get_all_inputs()
         previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_generated_frames)
         current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
-        disc_real_output = self.discriminator([previous_frames, current_frames], training=True)
-        disc_generated_output = self.discriminator([previous_generated_frames, generated_frames], training=True)
+        frames_diff = current_frames - previous_frames
+        generated_diff = generated_frames - previous_generated_frames
+        disc_real_output = self.discriminator([previous_frames, current_frames, frames_diff], training=True)
+        disc_generated_output = self.discriminator([previous_generated_frames, generated_frames, generated_diff], training=True)
         disc_loss_value = self.discriminator_loss_function(disc_real_output, disc_generated_output)
         total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss = self.generator_loss_function(
             disc_generated_output,
@@ -687,15 +691,24 @@ class PreprocessedDataGenerator():
         current_triangles = current_landmarks[:, DEFAULT_TRIANGULATION]
         previous_gen_triangles = previous_gen_landmarks[:, DEFAULT_TRIANGULATION]
         current_gen_triangles = current_gen_landmarks[:, DEFAULT_TRIANGULATION]
+        frames_diff = current_frames - previous_frames
+        generated_diff = generated_frames - previous_generated_frames
+        diff_diff = frames_diff - generated_diff
         if self.save_path:
             output_folder = Path(self.save_path) / self.name
             output_folder.mkdir(parents=True, exist_ok=True)
             save_gif(generated_frames, output_folder / "generated.gif")
             save_gif(current_frames, output_folder / "groundtruth.gif")
             save_gif(deformed_frames, output_folder / "deformed.gif")
+            save_gif(frames_diff, output_folder / "frames_diff.gif")
+            save_gif(generated_diff, output_folder / "generated_diff.gif")
+            save_gif(diff_diff, output_folder / "diff_diff.gif")
             np.save(output_folder / "generated.npy", generated_frames)
             np.save(output_folder / "groundtruth.npy", current_frames)
             np.save(output_folder / "deformed.npy", deformed_frames)
+            np.save(output_folder / "frames_diff.npy", frames_diff)
+            np.save(output_folder / "generated_diff.npy", generated_diff)
+            np.save(output_folder / "diff_diff.npy", diff_diff)
             previous_generated_frames_path = output_folder / "previous_generated_frames.pdf"
             generated_frames_path = output_folder / "generated_frames.pdf"
             current_frames_path = output_folder / "current_frames.pdf"

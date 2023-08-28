@@ -92,8 +92,10 @@ class GeneratorLoss(object):
         self.lambda_landmarks_coherence_loss = lambda_landmarks_coherence_loss
         self.cross_entropy_loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
         self.lambda_landmarks_perceptual_loss = lambda_landmarks_perceptual_loss
-        if self.lambda_landmarks_perceptual_loss:
+        if self.lambda_landmarks_perceptual_loss is not None:
             self.vgg = VGG19(weights='imagenet', include_top=False)
+        else:
+            self.vgg = None
 
 
     def __call__(self,
@@ -119,7 +121,7 @@ class GeneratorLoss(object):
         else:
             coherence_loss = 0
           
-        if self.vgg:
+        if self.vgg is not None and self.lambda_landmarks_perceptual_loss is not None:
             landmarks_perceptual_loss = perceptual_loss(current_target, current_gen, self.vgg) * self.lambda_landmarks_perceptual_loss
         else:
             landmarks_perceptual_loss = 0
