@@ -639,7 +639,7 @@ class PreprocessedDataGenerator():
         batch_deformed_frames = self._deformed_frames[begin_batch:end_batch]
         end_previous = begin_previous+len(batch_frames)
         batch_previous_frames = self.current_video[begin_previous:end_previous]
-        batch_previous_deformed_frames = self._deformed_frames[begin_previous:end_batch]
+        batch_previous_deformed_frames = self._deformed_frames[begin_previous:end_previous]
         self.current_frame_index += len(batch_frames)
         while len(batch_frames) < self.batch_size:
             if self._has_next_video():
@@ -661,7 +661,6 @@ class PreprocessedDataGenerator():
                 self._restart() # don't stop iteration in the middle of a batch
                 if not self.repeat:
                     self.stop_iteration = True
-        
         return (batch_frames - batch_previous_frames), (batch_deformed_frames - batch_previous_deformed_frames)
 
 
