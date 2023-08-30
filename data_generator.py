@@ -625,6 +625,45 @@ class PreprocessedDataGenerator():
         previous_frames, current_frames, _, _, previous_generated_frames, generated_frames, _, _, _ = self._get_all_inputs()
         return previous_generated_frames, generated_frames - previous_generated_frames, current_frames - previous_frames
     
+    def get_deformed_diff_batch(self):
+        if self.stop_iteration:
+            raise StopIteration
+        
+        if not self._current_video_has_next_frame() and self._has_next_video():
+            self._load_next_video()
+        
+        begin_batch = self.current_frame_index
+        end_batch = begin_batch+self.batch_size
+        begin_previous = begin_batch-1
+        batch_frames = self.current_video[begin_batch:end_batch]
+        batch_deformed_frames = self._deformed_frames[begin_batch:end_batch]
+        end_previous = begin_previous+len(batch_frames)
+        batch_previous_frames = self.current_video[begin_previous:end_previous]
+        batch_previous_deformed_frames = self._deformed_frames[begin_previous:end_previous]
+        self.current_frame_index += len(batch_frames)
+        while len(batch_frames) < self.batch_size:
+            if self._has_next_video():
+                self._load_next_video()
+                if self._current_video_has_two_frames():
+                    n_frames = len(batch_frames)
+                    n_remaning = self.batch_size - n_frames
+                    begin_batch = self.current_frame_index
+                    end_batch = begin_batch+n_remaning
+                    begin_previous = begin_batch-1
+                    batch_frames = np.concatenate([batch_frames, self.current_video[begin_batch:end_batch]])
+                    batch_deformed_frames = np.concatenate([batch_deformed_frames, self._deformed_frames[begin_batch:end_batch]])
+                    n_added_frames = len(batch_frames) - n_frames
+                    end_previous = begin_previous+n_added_frames
+                    batch_previous_frames = np.concatenate([batch_previous_frames, self.current_video[begin_previous:end_previous]])
+                    batch_previous_deformed_frames = np.concatenate([batch_previous_deformed_frames, self._deformed_frames[begin_previous:end_previous]])
+                    self.current_frame_index += n_added_frames
+            else:
+                self._restart() # don't stop iteration in the middle of a batch
+                if not self.repeat:
+                    self.stop_iteration = True
+        return (batch_frames - batch_previous_frames), (batch_deformed_frames - batch_previous_deformed_frames)
+
+
     def generate_first_batch(self):
         if self._first_batch_frames is None:
             # self._restart()
