@@ -68,7 +68,7 @@ def coherence_mean_landmarks_loss(previous_y_true_landmarks, y_true_landmarks, p
 def perceptual_loss(y_true, y_pred, vgg):
     layer_name = 'block5_conv4'
     intermediate_layer_model = Model(inputs=vgg.input, outputs=vgg.get_layer(layer_name).output)
-    return keras.losses.MSE(intermediate_layer_model(y_true), intermediate_layer_model(y_pred))
+    return tf.reduce_mean(keras.losses.MSE(intermediate_layer_model(y_true), intermediate_layer_model(y_pred)))
 
 @tf.function
 def interpolate_frames(frame1, frame2, alpha=0.5):
