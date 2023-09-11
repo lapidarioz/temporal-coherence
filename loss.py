@@ -74,22 +74,6 @@ def perceptual_loss(y_true, y_pred, vgg):
     return tf.reduce_mean(keras.losses.MSE(intermediate_layer_model(y_true), intermediate_layer_model(y_pred)))
 
 def interpolation_loss(previous_gen, current_gen, previous_target, current_target, loss_function, model):
-    # batch_size = previous_gen.shape[0]
-    # time_array = np.ones([batch_size, 1]) * 0.5
-    # print(time_array.shape)
-    # print(previous_gen.shape)
-    # print(current_gen.shape)
-    # mid_gen = model({
-    #    'time': time_array,
-    #    'x0': previous_gen,
-    #    'x1': current_gen
-    # })
-    # print(mid_gen.keys())
-    # mid_target = model({
-    #     'time': time_array,
-    #     'x0': previous_target,
-    #     'x1': current_target
-    #   })
     mid_gen = (previous_gen + current_gen)/2
     mid_target = (previous_target + current_target)/2
     mid_gen = tf.cast(mid_gen, tf.float32)
