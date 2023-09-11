@@ -159,7 +159,7 @@ class GeneratorLoss(object):
         landmarks_loss = 0
         landmarks_coherence_loss = 0
 
-        if self.lambda_landmarks_loss:
+        if self.landmarks_loss_function:
             landmarks_loss = mean_loss(
                 current_target_landmarks,
                 current_gen_landmarks,
