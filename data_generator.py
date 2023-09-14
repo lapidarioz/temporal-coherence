@@ -198,7 +198,7 @@ class PreprocessedFrameDataGenerator(FrameDataGenerator):
         disc_real_output = self.discriminator([previous_frame, current_frame], training=True)
         disc_generated_output = self.discriminator([previous_frame, generated_frame], training=True)
         disc_loss_value = self.discriminator_loss_function(disc_real_output, disc_generated_output)
-        total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, perceptual_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value = self.generator_loss_function(
+        total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, vgg_loss_value, styles_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value = self.generator_loss_function(
             disc_generated_output,
             previously_generated,
             generated_frame,
@@ -209,7 +209,7 @@ class PreprocessedFrameDataGenerator(FrameDataGenerator):
             previous_gen_landmarks,
             current_gen_landmarks
         )        
-        return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, perceptual_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value
+        return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, vgg_loss_value, styles_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value
     
     def restart(self):
         return self._restart()
@@ -408,7 +408,7 @@ class MultipleVideoDataGenerator():
         disc_real_output = self.discriminator([previous_frames, current_frames, frames_diff], training=True)
         disc_generated_output = self.discriminator([previously_generated_frames, generated_frames, generated_diff], training=True)
         disc_loss_value = self.discriminator_loss_function(disc_real_output, disc_generated_output)
-        total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, perceptual_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value = self.generator_loss_function(
+        total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, vgg_loss_value, styles_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value = self.generator_loss_function(
             disc_generated_output,
             previously_generated_frames,
             generated_frames,
@@ -419,7 +419,7 @@ class MultipleVideoDataGenerator():
             previous_gen_landmarks,
             current_gen_landmarks
         )        
-        return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, perceptual_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value
+        return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, vgg_loss_value, styles_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value
     
     def next_plot(self):
         # get frames and landmarks before generating next frames
@@ -697,7 +697,7 @@ class PreprocessedDataGenerator():
         disc_real_output = self.discriminator([previous_frames, current_frames, frames_diff], training=True)
         disc_generated_output = self.discriminator([previous_generated_frames, generated_frames, generated_diff], training=True)
         disc_loss_value = self.discriminator_loss_function(disc_real_output, disc_generated_output)
-        total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, perceptual_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value = self.generator_loss_function(
+        total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, vgg_loss_value, styles_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value = self.generator_loss_function(
             disc_generated_output,
             previous_generated_frames,
             generated_frames,
@@ -708,7 +708,7 @@ class PreprocessedDataGenerator():
             previous_gen_landmarks,
             current_gen_landmarks
         )        
-        return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, perceptual_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value
+        return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, vgg_loss_value, styles_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value
 
     def next_plot(self):
         (previous_frames,
@@ -955,7 +955,7 @@ class PreprocessedNeutralDataGenerator(PreprocessedDataGenerator):
         disc_real_output = self.discriminator([previous_frames, current_frames], training=True)
         disc_generated_output = self.discriminator([previous_generated_frames, generated_frames], training=True)
         disc_loss_value = self.discriminator_loss_function(disc_real_output, disc_generated_output)
-        total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, perceptual_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value = self.generator_loss_function(
+        total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, vgg_loss_value, styles_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value = self.generator_loss_function(
             disc_generated_output,
             previous_generated_frames,
             generated_frames,
@@ -966,7 +966,7 @@ class PreprocessedNeutralDataGenerator(PreprocessedDataGenerator):
             previous_gen_landmarks,
             current_gen_landmarks
         )        
-        return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, perceptual_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value
+        return total_gen_loss, disc_loss_value, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, vgg_loss_value, styles_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value
 
     def next_plot(self):
         (previous_frames,

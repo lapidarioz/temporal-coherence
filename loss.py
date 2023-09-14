@@ -8,6 +8,7 @@ import tensorflow_io as tfio
 from normalize import images_from_normalized
 from tensorflow_graphics.math.interpolation.slerp import interpolate
 import numpy as np
+from vgg19_loss import vgg_loss, style_loss
 
 @tf.function
 def euclidean_distance(a, b):
@@ -91,7 +92,8 @@ class GeneratorLoss(object):
                 lambda_landmarks_loss=1,
                 landmarks_coherence_loss_function=None,
                 lambda_landmarks_coherence_loss=1,
-                lambda_perceptual_loss=None,
+                lambda_vgg_loss=None,
+                lambda_styles_loss=None,
                 interpolation_frames_loss_function=None,
                 lambda_interpolation_frames_loss=1,
                 interpolation_landmarks_loss_function=None,
@@ -105,11 +107,12 @@ class GeneratorLoss(object):
         self.landmarks_coherence_loss_function = landmarks_coherence_loss_function
         self.lambda_landmarks_coherence_loss = lambda_landmarks_coherence_loss
         self.cross_entropy_loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-        self.lambda_perceptual_loss = lambda_perceptual_loss
-        if self.lambda_perceptual_loss is not None:
-            self.vgg = VGG19(weights='imagenet', include_top=False)
+        self.lambda_vgg_loss = lambda_vgg_loss
+        self.lambda_styles_loss = lambda_styles_loss
+        if self.lambda_vgg_loss is not None or self.lambda_styles_loss is not None:
+            self.vgg_path = "/home/jupyter/data/pretrained_models/vgg/imagenet-vgg-verydeep-19.mat"
         else:
-            self.vgg = None
+            self.vgg_path = None
         self.interpolation_frames_loss_function = interpolation_frames_loss_function
         self.lambda_interpolation_frames_loss = lambda_interpolation_frames_loss
         # if self.interpolation_frames_loss_function is not None:
@@ -141,10 +144,20 @@ class GeneratorLoss(object):
         else:
             coherence_loss = 0
           
-        if self.vgg is not None and self.lambda_perceptual_loss is not None:
-            perceptual_loss_value = perceptual_loss(current_target, current_gen, self.vgg) * self.lambda_perceptual_loss
+        if self.vgg_path is not None:
+          if self.lambda_vgg_loss is not None:
+              vgg_loss_value = vgg_loss(current_gen, current_target, self.vgg_path) * self.lambda_vgg_loss
+          else:
+              vgg_loss_value = 0
+          
+          if self.lambda_styles_loss is not None:
+              styles_loss_value = style_loss(current_gen, current_target, self.vgg_path) * self.lambda_styles_loss
+          else:
+              styles_loss_value = 0
         else:
-            perceptual_loss_value = 0
+          vgg_loss_value = 0
+          styles_loss_value = 0
+        
         
         if self.interpolation_frames_loss_function:
             interpolation_frame_loss_value = interpolation_loss(previous_gen, current_gen, previous_target, current_target, self.interpolation_frames_loss_function) * self.lambda_interpolation_frames_loss
@@ -175,9 +188,9 @@ class GeneratorLoss(object):
               self.landmarks_coherence_loss_function
             ) * self.lambda_landmarks_coherence_loss
 
-        total_gen_loss = gan_loss + main_loss + coherence_loss + landmarks_loss + landmarks_coherence_loss + perceptual_loss_value + interpolation_frame_loss_value + interpolation_landmarks_loss_value
+        total_gen_loss = gan_loss + main_loss + coherence_loss + landmarks_loss + landmarks_coherence_loss + vgg_loss_value + styles_loss_value + interpolation_frame_loss_value + interpolation_landmarks_loss_value
 
-        return total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, perceptual_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value
+        return total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, vgg_loss_value, styles_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value
 
 
 
