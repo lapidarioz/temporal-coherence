@@ -9,6 +9,9 @@ from normalize import images_from_normalized
 from tensorflow_graphics.math.interpolation.slerp import interpolate
 import numpy as np
 from vgg19_loss import vgg_loss, style_loss
+from PWCNet.PWCDCNet import PWCDCNet
+from PWCNet.inference import inference, restore
+from PWCNet.flow_utils import flow_to_image
 
 @tf.function
 def euclidean_distance(a, b):
@@ -80,6 +83,24 @@ def interpolation_loss(previous_gen, current_gen, previous_target, current_targe
     mid_gen = tf.cast(mid_gen, tf.float32)
     mid_target = tf.cast(mid_target, tf.float32)
     return tf.math.reduce_mean(loss_function(mid_target, mid_gen))
+
+def get_optical_flow(previous_frames, current_frames, model=None):
+  if model is None:
+    model = PWCDCNet()
+    restore(net=model, ckpt_path="/home/jupyter/data/pretrained_models/pwcnet/ckpt-1200000.ckpt")
+  frames_pair = np.concatenate([previous_frames, current_frames], axis=2)
+  frames_pair = np.expand_dims(frames_pair, axis=0)
+
+  flo_pred = inference(frames_pair, model=model)
+  return flow_to_image(flo_pred.numpy())
+
+def optical_flow_loss(previous_gen, current_gen, previous_target, current_target, loss_function):
+  pwcnet = PWCDCNet()
+  restore(net=pwcnet, ckpt_path="/home/jupyter/data/pretrained_models/pwcnet/ckpt-1200000.ckpt")
+  gen_optical_flow = get_optical_flow(previous_gen, current_gen, pwcnet)
+  target_optical_flow = get_optical_flow(previous_target, current_target, pwcnet)
+
+  return tf.math.reduce_mean(loss_function(target_optical_flow, gen_optical_flow))
 
 class GeneratorLoss(object):
 

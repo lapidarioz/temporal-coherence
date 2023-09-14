@@ -7,6 +7,7 @@ from transformation import deform
 from plot import plot_normalized_sequence, plot_landmarks, plot_triangles, save_gif
 from pathlib import Path
 from settings.facial import DEFAULT_TRIANGULATION
+from loss import get_optical_flow
 
 class FrameDataGenerator():
     
@@ -845,6 +846,43 @@ class PreprocessedDataGenerator():
         plot_normalized_sequence(mid_target, mid_target_path)
         tf.print("mid_diff")
         plot_normalized_sequence(mid_diff, mid_diff_path)
+    
+    def next_optical_flow_plot(self):
+        (previous_frames,
+        current_frames,
+        _,
+        _,
+        previous_generated_frames,
+        generated_frames,
+        _,
+        _,
+        _) = self._get_all_inputs()
+        of_gen = get_optical_flow(previous_generated_frames, generated_frames)
+        of_target = get_optical_flow(previous_frames, current_frames)
+        of_diff = of_target - of_gen
+        if self.save_path:
+            output_folder = Path(self.save_path) / self.name
+            output_folder.mkdir(parents=True, exist_ok=True)
+            # np.save(output_folder / "of_gen.npy", of_gen)
+            # np.save(output_folder / "of_target.npy", of_target)
+            # np.save(output_folder / "of_diff.npy", of_diff)
+            save_gif(of_gen, output_folder / "of_gen.gif")
+            save_gif(of_target, output_folder / "of_target.gif")
+            save_gif(of_diff, output_folder / "of_diff.gif")
+            of_gen_path = output_folder / "of_gen.pdf"
+            of_target_path = output_folder / "of_target.pdf"
+            of_diff_path = output_folder / "of_diff.pdf"
+        else:
+            of_gen_path = None
+            of_target_path = None
+            of_diff_path = None
+        tf.print("of_gen")
+        plot_normalized_sequence(of_gen, of_gen_path)
+        tf.print("of_target")
+        plot_normalized_sequence(of_target, of_target_path)
+        tf.print("of_diff")
+        plot_normalized_sequence(of_diff, of_diff_path)
+
 
 
 
