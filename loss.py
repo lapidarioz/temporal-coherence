@@ -73,7 +73,7 @@ def perceptual_loss(y_true, y_pred, vgg):
     intermediate_layer_model = Model(inputs=vgg.input, outputs=vgg.get_layer(layer_name).output)
     return tf.reduce_mean(keras.losses.MSE(intermediate_layer_model(y_true), intermediate_layer_model(y_pred)))
 
-def interpolation_loss(previous_gen, current_gen, previous_target, current_target, loss_function, model):
+def interpolation_loss(previous_gen, current_gen, previous_target, current_target, loss_function):
     mid_gen = (previous_gen + current_gen)/2
     mid_target = (previous_target + current_target)/2
     mid_gen = tf.cast(mid_gen, tf.float32)
@@ -112,8 +112,8 @@ class GeneratorLoss(object):
             self.vgg = None
         self.interpolation_frames_loss_function = interpolation_frames_loss_function
         self.lambda_interpolation_frames_loss = lambda_interpolation_frames_loss
-        if self.interpolation_frames_loss_function is not None:
-           self.interpolation_model = hub.load("https://tfhub.dev/google/film/1")
+        # if self.interpolation_frames_loss_function is not None:
+        #    self.interpolation_model = hub.load("https://tfhub.dev/google/film/1")
         self.interpolation_landmarks_loss_function = interpolation_landmarks_loss_function
         self.lambda_interpolation_landmarks_loss = lambda_interpolation_landmarks_loss
 
@@ -147,12 +147,12 @@ class GeneratorLoss(object):
             perceptual_loss_value = 0
         
         if self.interpolation_frames_loss_function:
-            interpolation_frame_loss_value = interpolation_loss(previous_gen, current_gen, previous_target, current_target, self.interpolation_frames_loss_function, self.interpolation_model) * self.lambda_interpolation_frames_loss
+            interpolation_frame_loss_value = interpolation_loss(previous_gen, current_gen, previous_target, current_target, self.interpolation_frames_loss_function) * self.lambda_interpolation_frames_loss
         else:
             interpolation_frame_loss_value = 0
         
         if self.interpolation_landmarks_loss_function:
-            interpolation_landmarks_loss_value = interpolation_loss(previous_gen_landmarks, current_gen_landmarks, previous_target_landmarks, current_target_landmarks, self.interpolation_landmarks_loss_function, self.interpolation_model) * self.lambda_interpolation_landmarks_loss
+            interpolation_landmarks_loss_value = interpolation_loss(previous_gen_landmarks, current_gen_landmarks, previous_target_landmarks, current_target_landmarks, self.interpolation_landmarks_loss_function) * self.lambda_interpolation_landmarks_loss
         else:
             interpolation_landmarks_loss_value = 0
 

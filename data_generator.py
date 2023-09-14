@@ -810,6 +810,44 @@ class PreprocessedDataGenerator():
         tf.print("previous_gen_triangles")
         plot_triangles(previous_generated_frames, previous_gen_triangles, previous_gen_triangles_path)
 
+    def next_interpolation_plot(self):
+        (previous_frames,
+        current_frames,
+        _,
+        _,
+        previous_generated_frames,
+        generated_frames,
+        _,
+        _,
+        _) = self._get_all_inputs()
+        mid_gen = (previous_generated_frames + generated_frames)/2
+        mid_target = (previous_frames + current_frames)/2
+        mid_diff = mid_target - mid_gen
+        if self.save_path:
+            output_folder = Path(self.save_path) / self.name
+            output_folder.mkdir(parents=True, exist_ok=True)
+            # np.save(output_folder / "mid_gen.npy", mid_gen)
+            # np.save(output_folder / "mid_target.npy", mid_target)
+            # np.save(output_folder / "mid_diff.npy", mid_diff)
+            save_gif(mid_gen, output_folder / "mid_gen.gif")
+            save_gif(mid_target, output_folder / "mid_target.gif")
+            save_gif(mid_diff, output_folder / "mid_diff.gif")
+            mid_gen_path = output_folder / "mid_gen.pdf"
+            mid_target_path = output_folder / "mid_target.pdf"
+            mid_diff_path = output_folder / "mid_diff.pdf"
+        else:
+            mid_gen_path = None
+            mid_target_path = None
+            mid_diff_path = None
+        tf.print("mid_gen")
+        plot_normalized_sequence(mid_gen, mid_gen_path)
+        tf.print("mid_target")
+        plot_normalized_sequence(mid_target, mid_target_path)
+        tf.print("mid_diff")
+        plot_normalized_sequence(mid_diff, mid_diff_path)
+
+
+
 
 class PreprocessedNeutralDataGenerator(PreprocessedDataGenerator):
 
