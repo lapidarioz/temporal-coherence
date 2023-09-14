@@ -1,5 +1,5 @@
 # Runtime Image
-FROM tensorflow/tensorflow:2.13.0-gpu-jupyter
+FROM tensorflow/tensorflow:2.14.0rc1-gpu-jupyter
 
 RUN apt-get update && apt-get install -y \
         ffmpeg \
@@ -39,13 +39,13 @@ RUN apt-get update && apt-get install -y \
         apt-get purge   --auto-remove && \
         apt-get clean
 
-RUN python3 -m pip install --no-cache --upgrade pip dlib face_recognition jupyterlab
+# --no-cache-dir is returning the following error for some packages: ERROR: THESE PACKAGES DO NOT MATCH THE HASHES FROM THE REQUIREMENTS FILE. If you have updated the package versions, please update the hashes. Otherwise, examine the package contents carefully; someone may have tampered with them.
+RUN python3 -m pip install --upgrade pip dlib face_recognition jupyterlab
 
 WORKDIR /home/jupyter
 
 COPY requirements.txt /home/jupyter/
 
-
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 ENTRYPOINT ["jupyter", "lab","--ip=0.0.0.0","--port=5555","--allow-root"]
