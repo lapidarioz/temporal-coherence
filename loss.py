@@ -9,69 +9,82 @@ from normalize import images_from_normalized
 from tensorflow_graphics.math.interpolation.slerp import interpolate
 import numpy as np
 
+
 @tf.function
 def euclidean_distance(a, b):
-  return tf.math.sqrt(tf.math.reduce_sum(tf.math.pow(a-b, 2), axis=-1))
+    return tf.math.sqrt(tf.math.reduce_sum(tf.math.pow(a-b, 2), axis=-1))
+
 
 @tf.function
 def all_pairs_distances(x):
-  x = tf.reshape(x, (-1, x.shape[-1]))
-  indices = tf.stack(list(combinations(range(len(x)), 2))) # TODO: fix to consider batch size
-  a_index = indices[:,0]
-  b_index = indices[:,1]
-  a = tf.gather(x, a_index)
-  b = tf.gather(x, b_index)
-  return euclidean_distance(a,b)
+    x = tf.reshape(x, (-1, x.shape[-1]))
+    indices = tf.stack(list(combinations(range(len(x)), 2))
+                       )  # TODO: fix to consider batch size
+    a_index = indices[:, 0]
+    b_index = indices[:, 1]
+    a = tf.gather(x, a_index)
+    b = tf.gather(x, b_index)
+    return euclidean_distance(a, b)
+
 
 @tf.function
 def l1_loss(previous, current):
-  return  tf.math.abs(current-previous)
+    return tf.math.abs(current-previous)
+
 
 @tf.function
 def pairwise_loss(y_true, y_pred):
-  y_true = all_pairs_distances(y_true)
-  y_pred = all_pairs_distances(y_pred)
-  return tf.math.reduce_mean(euclidean_distance(y_true, y_pred))
+    y_true = all_pairs_distances(y_true)
+    y_pred = all_pairs_distances(y_pred)
+    return tf.math.reduce_mean(euclidean_distance(y_true, y_pred))
+
 
 @tf.function
 def get_luminance(image):
-  output = images_from_normalized(image)
-  output = tfio.experimental.color.rgb_to_ycbcr(output)
-  output = output[...,0] # get y from ycbcr
-  return tf.cast(output, tf.float32)
+    output = images_from_normalized(image)
+    output = tfio.experimental.color.rgb_to_ycbcr(output)
+    output = output[..., 0]  # get y from ycbcr
+    return tf.cast(output, tf.float32)
+
 
 @tf.function
 def apply_luminance_loss(previous, current, loss_function):
-  previous_luminance = get_luminance(previous)
-  current_luminance = get_luminance(current)
-  return loss_function(previous_luminance, current_luminance)
+    previous_luminance = get_luminance(previous)
+    current_luminance = get_luminance(current)
+    return loss_function(previous_luminance, current_luminance)
+
 
 @tf.function
 def mean_loss(y_true, y_pred, loss_function):
-  y_true = tf.cast(y_true, tf.float32)
-  y_pred = tf.cast(y_pred, tf.float32)
-  return tf.math.reduce_mean(loss_function(y_true, y_pred))
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.cast(y_pred, tf.float32)
+    return tf.math.reduce_mean(loss_function(y_true, y_pred))
+
 
 @tf.function
 def coherence_mean_loss(previous_y_true, y_true, previous_y_pred, y_pred, loss_function):
-  loss_true = apply_luminance_loss(previous_y_true, y_true, loss_function)
-  loss_pred = apply_luminance_loss(previous_y_pred, y_pred, loss_function)
-  return tf.math.reduce_mean(tf.abs(loss_true - loss_pred))
+    loss_true = apply_luminance_loss(previous_y_true, y_true, loss_function)
+    loss_pred = apply_luminance_loss(previous_y_pred, y_pred, loss_function)
+    return tf.math.reduce_mean(tf.abs(loss_true - loss_pred))
+
 
 @tf.function
 def coherence_mean_landmarks_loss(previous_y_true_landmarks, y_true_landmarks, previous_y_pred_landmarks, y_pred_landmarks, loss_function):
-  previous_y_true_landmarks = tf.cast(previous_y_true_landmarks, tf.float32)
-  y_true_landmarks = tf.cast(y_true_landmarks, tf.float32)
-  previous_y_pred_landmarks = tf.cast(previous_y_pred_landmarks, tf.float32)
-  y_pred_landmarks = tf.cast(y_pred_landmarks, tf.float32)
-  loss_true = loss_function(previous_y_true_landmarks, y_true_landmarks)
-  loss_pred = loss_function(previous_y_pred_landmarks, y_pred_landmarks)
-  return tf.math.reduce_mean(tf.abs(loss_true - loss_pred))
+    previous_y_true_landmarks = tf.cast(previous_y_true_landmarks, tf.float32)
+    y_true_landmarks = tf.cast(y_true_landmarks, tf.float32)
+    previous_y_pred_landmarks = tf.cast(previous_y_pred_landmarks, tf.float32)
+    y_pred_landmarks = tf.cast(y_pred_landmarks, tf.float32)
+    loss_true = loss_function(previous_y_true_landmarks, y_true_landmarks)
+    loss_pred = loss_function(previous_y_pred_landmarks, y_pred_landmarks)
+    return tf.math.reduce_mean(tf.abs(loss_true - loss_pred))
+
 
 def perceptual_loss(y_true, y_pred, vgg):
     layer_name = 'block5_conv4'
-    intermediate_layer_model = Model(inputs=vgg.input, outputs=vgg.get_layer(layer_name).output)
+    intermediate_layer_model = Model(
+        inputs=vgg.input, outputs=vgg.get_layer(layer_name).output)
     return tf.reduce_mean(keras.losses.MSE(intermediate_layer_model(y_true), intermediate_layer_model(y_pred)))
+
 
 def interpolation_loss(previous_gen, current_gen, previous_target, current_target, loss_function):
     mid_gen = (previous_gen + current_gen)/2
@@ -80,31 +93,33 @@ def interpolation_loss(previous_gen, current_gen, previous_target, current_targe
     mid_target = tf.cast(mid_target, tf.float32)
     return tf.math.reduce_mean(loss_function(mid_target, mid_gen))
 
+
 class GeneratorLoss(object):
 
     def __init__(self,
-                main_loss_function,
-                lambda_main_loss=1,
-                coherence_loss_function=None,
-                lambda_coherence_loss=1,
-                landmarks_loss_function=None,
-                lambda_landmarks_loss=1,
-                landmarks_coherence_loss_function=None,
-                lambda_landmarks_coherence_loss=1,
-                lambda_perceptual_loss=None,
-                interpolation_frames_loss_function=None,
-                lambda_interpolation_frames_loss=1,
-                interpolation_landmarks_loss_function=None,
-                lambda_interpolation_landmarks_loss=1):
-        self.main_loss_function = main_loss_function
-        self.lambda_main_loss = lambda_main_loss
+                 target_predicted_function,
+                 lambda_target_predicted=1,
+                 coherence_loss_function=None,
+                 lambda_coherence_loss=1,
+                 landmarks_loss_function=None,
+                 lambda_landmarks_loss=1,
+                 landmarks_coherence_loss_function=None,
+                 lambda_landmarks_coherence_loss=1,
+                 lambda_perceptual_loss=None,
+                 interpolation_frames_loss_function=None,
+                 lambda_interpolation_frames_loss=1,
+                 interpolation_landmarks_loss_function=None,
+                 lambda_interpolation_landmarks_loss=1):
+        self.target_predicted_function = target_predicted_function
+        self.lambda_target_predicted = lambda_target_predicted
         self.coherence_loss_function = coherence_loss_function
         self.lambda_coherence_loss = lambda_coherence_loss
         self.landmarks_loss_function = landmarks_loss_function
         self.lambda_landmarks_loss = lambda_landmarks_loss
         self.landmarks_coherence_loss_function = landmarks_coherence_loss_function
         self.lambda_landmarks_coherence_loss = lambda_landmarks_coherence_loss
-        self.cross_entropy_loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        self.cross_entropy_loss = tf.keras.losses.BinaryCrossentropy(
+            from_logits=True)
         self.lambda_perceptual_loss = lambda_perceptual_loss
         if self.lambda_perceptual_loss is not None:
             self.vgg = VGG19(weights='imagenet', include_top=False)
@@ -117,76 +132,98 @@ class GeneratorLoss(object):
         self.interpolation_landmarks_loss_function = interpolation_landmarks_loss_function
         self.lambda_interpolation_landmarks_loss = lambda_interpolation_landmarks_loss
 
-
     def __call__(self,
-      disc_generated_output,
-      previous_gen,
-      current_gen,
-      previous_target,
-      current_target,
-      previous_target_landmarks,
-      current_target_landmarks,
-      previous_gen_landmarks,
-      current_gen_landmarks,
-      ):
-        gan_loss = self.cross_entropy_loss(tf.ones_like(disc_generated_output), disc_generated_output)
+                 disc_generated_output,
+                 previous_gen,
+                 current_gen,
+                 previous_target,
+                 current_target,
+                 previous_target_landmarks,
+                 current_target_landmarks,
+                 previous_gen_landmarks,
+                 current_gen_landmarks,
+                 ):
+        losses = dict()
+        gan_loss = self.cross_entropy_loss(tf.ones_like(
+            disc_generated_output), disc_generated_output)
+        losses["gan_loss"] = gan_loss
 
-        if self.main_loss_function:
-            main_loss = mean_loss(current_target, current_gen, self.main_loss_function) * self.lambda_main_loss
-        else:
-            main_loss = 0
+        if self.target_predicted_function:
+            target_predicted = mean_loss(
+                current_target,
+                current_gen,
+                self.target_predicted_function) * self.lambda_target_predicted
+            losses["target_predicted"] = target_predicted
 
         if self.coherence_loss_function:
-            coherence_loss = coherence_mean_loss(previous_target, current_target, previous_gen, current_gen, self.coherence_loss_function) * self.lambda_coherence_loss
-        else:
-            coherence_loss = 0
-          
+            coherence_loss = coherence_mean_loss(
+                previous_target,
+                current_target,
+                previous_gen,
+                current_gen,
+                self.coherence_loss_function) * self.lambda_coherence_loss
+            losses["coherence_loss"] = coherence_loss
+
         if self.vgg is not None and self.lambda_perceptual_loss is not None:
-            perceptual_loss_value = perceptual_loss(current_target, current_gen, self.vgg) * self.lambda_perceptual_loss
-        else:
-            perceptual_loss_value = 0
-        
+            perceptual_loss_value = perceptual_loss(
+                current_target,
+                current_gen,
+                self.vgg) * self.lambda_perceptual_loss
+            losses["perceptual_loss"] = perceptual_loss_value
+
         if self.interpolation_frames_loss_function:
-            interpolation_frame_loss_value = interpolation_loss(previous_gen, current_gen, previous_target, current_target, self.interpolation_frames_loss_function) * self.lambda_interpolation_frames_loss
-        else:
-            interpolation_frame_loss_value = 0
-        
-        if self.interpolation_landmarks_loss_function:
-            interpolation_landmarks_loss_value = interpolation_loss(previous_gen_landmarks, current_gen_landmarks, previous_target_landmarks, current_target_landmarks, self.interpolation_landmarks_loss_function) * self.lambda_interpolation_landmarks_loss
-        else:
-            interpolation_landmarks_loss_value = 0
+            interpolation_frame_loss_value = interpolation_loss(
+                previous_gen,
+                current_gen,
+                previous_target,
+                current_target,
+                self.interpolation_frames_loss_function) * self.lambda_interpolation_frames_loss
+            losses["interpolation_frame_loss"] = interpolation_frame_loss_value
 
-        landmarks_loss = 0
-        landmarks_coherence_loss = 0
-
-        if self.landmarks_loss_function:
+        if self.landmarks_loss_function is not None and self.lambda_landmarks_loss is not None:
             landmarks_loss = mean_loss(
                 current_target_landmarks,
                 current_gen_landmarks,
                 self.landmarks_loss_function
-              ) * self.lambda_landmarks_loss
-            
-        if self.landmarks_coherence_loss_function:
+            ) * self.lambda_landmarks_loss
+            losses["landmarks_loss"] = landmarks_loss
+
+        if self.landmarks_coherence_loss_function is not None and self.lambda_landmarks_coherence_loss is not None:
             landmarks_coherence_loss = coherence_mean_landmarks_loss(
-              previous_target_landmarks,
-              current_target_landmarks,
-              previous_gen_landmarks,
-              current_gen_landmarks,
-              self.landmarks_coherence_loss_function
+                previous_target_landmarks,
+                current_target_landmarks,
+                previous_gen_landmarks,
+                current_gen_landmarks,
+                self.landmarks_coherence_loss_function
             ) * self.lambda_landmarks_coherence_loss
+            losses["landmarks_coherence_loss"] = landmarks_coherence_loss
 
-        total_gen_loss = gan_loss + main_loss + coherence_loss + landmarks_loss + landmarks_coherence_loss + perceptual_loss_value + interpolation_frame_loss_value + interpolation_landmarks_loss_value
+        if self.interpolation_landmarks_loss_function is not None and self.lambda_interpolation_landmarks_loss is not None:
+            interpolation_landmarks_loss_value = interpolation_loss(
+                previous_gen_landmarks,
+                current_gen_landmarks,
+                previous_target_landmarks,
+                current_target_landmarks,
+                self.interpolation_landmarks_loss_function
+                ) * self.lambda_interpolation_landmarks_loss
+            losses["interpolation_landmarks_loss"] = interpolation_landmarks_loss_value
 
-        return total_gen_loss, gan_loss, main_loss, coherence_loss, landmarks_loss, landmarks_coherence_loss, perceptual_loss_value, interpolation_frame_loss_value, interpolation_landmarks_loss_value
+        total_gen_loss = 0
+        for loss_value in losses.values():
+            total_gen_loss += loss_value
 
+        return total_gen_loss, losses
 
 
 class DiscriminatorLoss():
 
     def __init__(self):
-        self.cross_entropy_loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        self.cross_entropy_loss = tf.keras.losses.BinaryCrossentropy(
+            from_logits=True)
 
     def __call__(self, disc_real_output, disc_generated_output):
-        real_loss = self.cross_entropy_loss(tf.ones_like(disc_real_output), disc_real_output)
-        generated_loss = self.cross_entropy_loss(tf.zeros_like(disc_generated_output), disc_generated_output)
+        real_loss = self.cross_entropy_loss(
+            tf.ones_like(disc_real_output), disc_real_output)
+        generated_loss = self.cross_entropy_loss(
+            tf.zeros_like(disc_generated_output), disc_generated_output)
         return real_loss + generated_loss
