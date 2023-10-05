@@ -148,4 +148,4 @@ def save_gif(sample_sequence, path):
     imageio.mimwrite(str(path), images)
 
 def save_gif_rgb(sample_sequence, path):
-    imageio.mimwrite(str(path), sample_sequence)
+    imageio.mimwrite(str(path), sample_sequence, loop=0)
