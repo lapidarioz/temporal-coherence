@@ -46,6 +46,8 @@ class PreprocessedDataGenerator():
         self._first_batch_first_frames =  None
         self._first_batch_deformed_frames =  None
         self._first_batch_displacements  =  None
+        self._generated_frames_to_save = self.current_video[0:0]
+        self._current_video_to_save = self.current_video[0:0]
     
     def _load_current_video(self):
         while True:
@@ -398,3 +400,63 @@ class PreprocessedDataGenerator():
         plot_normalized_sequence(mid_target, mid_target_path)
         tf.print("mid_diff")
         plot_normalized_sequence(mid_diff, mid_diff_path)
+    
+    def save_gifs(self):
+        (_,
+        current_frames,
+        previous_landmarks,
+        current_landmarks,
+        previous_generated_frames,
+        generated_frames,
+        _,
+        _,
+        _) = self._get_all_inputs()
+        previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_generated_frames).numpy()
+        current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames).numpy()
+        previous_landmarks = add_boundary_points(previous_landmarks, self.height, self.width)
+        current_landmarks = add_boundary_points(current_landmarks, self.height, self.width)
+        previous_gen_landmarks = add_boundary_points(previous_gen_landmarks, self.height, self.width)
+        current_gen_landmarks = add_boundary_points(current_gen_landmarks, self.height, self.width)
+        if self.save_path:
+            output_folder = Path(self.save_path) / self.name
+        else:
+            raise ValueError("save_path must be set")
+        output_folder.mkdir(parents=True, exist_ok=True)
+        save_gif(generated_frames, output_folder / "generated.gif")
+        save_gif(current_frames, output_folder / "groundtruth.gif")
+
+    def save_next_video(self):
+        previous_video_index = self.current_video_index
+        (_,
+        current_frames,
+        _,
+        _,
+        _,
+        generated_frames,
+        _,
+        _,
+        _) = self._get_all_inputs()
+        current_video_index = self.current_video_index
+
+        if current_video_index == previous_video_index:
+            self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames])
+            self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames])
+        else:
+            # TODO: save reaming frames
+            # self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames[:-self.current_frame_index]])
+            # self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:-self.current_frame_index]])
+            # save previous videos
+            if self.save_path:
+                output_folder = Path(self.save_path) / str(previous_video_index)
+            else:
+                raise ValueError("save_path must be set")
+            output_folder.mkdir(parents=True, exist_ok=True)
+            save_gif(self._generated_frames_to_save, output_folder / "generated.gif")
+            save_gif(self._current_video_to_save, output_folder / "groundtruth.gif")
+            # TODO: save first frames
+            # store current video frames
+            # self._generated_frames_to_save = generated_frames[self.current_frame_index:]
+            # self._current_video_to_save = current_frames[self.current_frame_index:]
+            self._generated_frames_to_save = generated_frames[0:0]
+            self._current_video_to_save = current_frames[0:0]
+            
