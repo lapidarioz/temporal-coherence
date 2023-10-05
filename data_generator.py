@@ -448,16 +448,17 @@ class PreprocessedDataGenerator():
         _,
         deformed_frames,
         _) = self._get_all_inputs()
-        current_video_index = self.current_video_index
 
-        if current_video_index == previous_video_index:
+        if self.current_video_index == previous_video_index:
             self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames])
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames])
             self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames])
         else:
-            # TODO: save reaming frames
-            # self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames[:-self.current_frame_index]])
-            # self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:-self.current_frame_index]])
+            # TODO: fix when video has less than batch_size frames
+            split_position = self.batch_size - self.current_frame_index
+            self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames[:split_position]])
+            self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:split_position]])
+            self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames[:split_position]])
             # save previous videos
             if self.save_path:
                 output_folder = Path(self.save_path) / previous_video_path
@@ -467,11 +468,8 @@ class PreprocessedDataGenerator():
             save_gif(self._generated_frames_to_save, output_folder / f"{previous_video_index}_generated.gif")
             save_gif(self._current_video_to_save, output_folder / f"{previous_video_index}_groundtruth.gif")
             save_gif(self._deformed_frames_to_save, output_folder / f"{previous_video_index}_deformed.gif")
-            # TODO: save first frames
             # store current video frames
-            # self._generated_frames_to_save = generated_frames[self.current_frame_index:]
-            # self._current_video_to_save = current_frames[self.current_frame_index:]
-            self._generated_frames_to_save = generated_frames[0:0]
-            self._current_video_to_save = current_frames[0:0]
-            self._deformed_frames_to_save = deformed_frames[0:0]
+            self._generated_frames_to_save = generated_frames[split_position:]
+            self._current_video_to_save = current_frames[split_position:]
+            self._deformed_frames_to_save = deformed_frames[split_position:]
             
