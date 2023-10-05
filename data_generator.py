@@ -68,8 +68,17 @@ class PreprocessedDataGenerator():
     
     @property
     def name(self):
-        # return self.videos_path[self.current_video_index].split("/")[-1].split(".")[0]
         return f"{self.current_video_index}_{self.current_frame_index}"
+    
+    def _get_path_unique_parts(self):
+        video_path = Path(self.videos_path[self.current_video_index])
+        return video_path.parts[3:-1]
+    
+    def current_video_relative_path(self):
+        return Path(*self._get_path_unique_parts())
+    
+    def path_id(self):
+        return "_".join(self._get_path_unique_parts())
 
     def _load_next_video(self):
         self.current_frame_index = 1
@@ -429,6 +438,7 @@ class PreprocessedDataGenerator():
 
     def save_next_video(self):
         previous_video_index = self.current_video_index
+        previous_video_path = self.current_video_relative_path()
         (_,
         current_frames,
         _,
@@ -450,13 +460,13 @@ class PreprocessedDataGenerator():
             # self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:-self.current_frame_index]])
             # save previous videos
             if self.save_path:
-                output_folder = Path(self.save_path) / str(previous_video_index)
+                output_folder = Path(self.save_path) / previous_video_path
             else:
                 raise ValueError("save_path must be set")
             output_folder.mkdir(parents=True, exist_ok=True)
-            save_gif(self._generated_frames_to_save, output_folder / "generated.gif")
-            save_gif(self._current_video_to_save, output_folder / "groundtruth.gif")
-            save_gif(self._deformed_frames_to_save, output_folder / "deformed.gif")
+            save_gif(self._generated_frames_to_save, output_folder / f"{previous_video_index}_generated.gif")
+            save_gif(self._current_video_to_save, output_folder / f"{previous_video_index}_groundtruth.gif")
+            save_gif(self._deformed_frames_to_save, output_folder / f"{previous_video_index}_deformed.gif")
             # TODO: save first frames
             # store current video frames
             # self._generated_frames_to_save = generated_frames[self.current_frame_index:]
