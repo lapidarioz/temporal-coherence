@@ -48,6 +48,7 @@ class PreprocessedDataGenerator():
         self._first_batch_displacements  =  None
         self._generated_frames_to_save = self.current_video[0:0]
         self._current_video_to_save = self.current_video[0:0]
+        self._deformed_frames_to_save = self.current_video[0:0]
     
     def _load_current_video(self):
         while True:
@@ -89,6 +90,7 @@ class PreprocessedDataGenerator():
         for i in self._range_current_video():
              self._deformed_frames[i], _ = deform(
                 self._first_frame(),
+                self._current_source_video[i],
                 self._first_landmarks(),
                 self._current_source_landmarks[0],
                 self._current_source_landmarks[i]
@@ -434,13 +436,14 @@ class PreprocessedDataGenerator():
         _,
         generated_frames,
         _,
-        _,
+        deformed_frames,
         _) = self._get_all_inputs()
         current_video_index = self.current_video_index
 
         if current_video_index == previous_video_index:
             self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames])
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames])
+            self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames])
         else:
             # TODO: save reaming frames
             # self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames[:-self.current_frame_index]])
@@ -453,10 +456,12 @@ class PreprocessedDataGenerator():
             output_folder.mkdir(parents=True, exist_ok=True)
             save_gif(self._generated_frames_to_save, output_folder / "generated.gif")
             save_gif(self._current_video_to_save, output_folder / "groundtruth.gif")
+            save_gif(self._deformed_frames_to_save, output_folder / "deformed.gif")
             # TODO: save first frames
             # store current video frames
             # self._generated_frames_to_save = generated_frames[self.current_frame_index:]
             # self._current_video_to_save = current_frames[self.current_frame_index:]
             self._generated_frames_to_save = generated_frames[0:0]
             self._current_video_to_save = current_frames[0:0]
+            self._deformed_frames_to_save = deformed_frames[0:0]
             

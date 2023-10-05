@@ -1,6 +1,6 @@
 import cv2 
 import numpy as np
-from settings.facial import DEFAULT_TRIANGULATION
+from settings.facial import DEFAULT_TRIANGULATION, MOUTH_TRIANGULATION
 from landmarks import add_boundary_points
 
 
@@ -50,27 +50,37 @@ def warp_triangle(img1, img2, t1, t2):
         except ValueError:
             pass # TODO: Fix this
 
+def copy_image(image):
+    if type(image) == np.ndarray:
+        return image.copy()
+    else:
+        return image.numpy().copy()
 
 def warp_all(input_image, input_triangles, new_triangles):
-    if type(input_image) == np.ndarray:
-        input_image_warped = input_image.copy()
-    else:
-        input_image_warped = input_image.numpy().copy()
+    input_image_warped = copy_image(input_image)
 
-    for current_ipunt_triangle, current_new_triangle in zip(input_triangles,new_triangles):
-        warp_triangle(input_image, input_image_warped, current_ipunt_triangle, current_new_triangle)
+    for current_input_triangle, current_new_triangle in zip(input_triangles,new_triangles):
+        warp_triangle(input_image, input_image_warped, current_input_triangle, current_new_triangle)
 
     return input_image_warped
 
 def get_new_landmarks(source_landmarks_previous, source_landmarks_current, target_landmarks_current):
     return np.add(np.subtract(source_landmarks_current, source_landmarks_previous), target_landmarks_current)
 
+def warp_mouth(target_image, target_landmarks, source_image, source_landmarks):
+    target_image_warped = copy_image(target_image)
+    source_triangles = source_landmarks[MOUTH_TRIANGULATION]
+    target_triangles = target_landmarks[MOUTH_TRIANGULATION]
+    for current_source_triangle, current_target_triangle in zip(source_triangles,target_triangles):
+        warp_triangle(source_image, target_image_warped, current_source_triangle, current_target_triangle)
+    return target_image_warped
 
-def deform(input_image, input_landmarks, previous_source_landmarks, current_source_landmarks):
+def deform(input_image, source_image, input_landmarks, previous_source_landmarks, current_source_landmarks):
     input_landmarks = add_boundary_points(input_landmarks, input_image.shape[0], input_image.shape[1])
     previous_source_landmarks = add_boundary_points(previous_source_landmarks, input_image.shape[0], input_image.shape[1])
     current_source_landmarks = add_boundary_points(current_source_landmarks, input_image.shape[0], input_image.shape[1])
     input_triangles = input_landmarks[DEFAULT_TRIANGULATION]
     new_landmarks = get_new_landmarks(previous_source_landmarks, current_source_landmarks, input_landmarks)
     new_triangles = new_landmarks[DEFAULT_TRIANGULATION]
-    return warp_all(input_image, input_triangles, new_triangles), new_landmarks
+    warped_image =  warp_all(input_image, input_triangles, new_triangles)
+    return warp_mouth(warped_image, new_landmarks, source_image, current_source_landmarks), new_landmarks
