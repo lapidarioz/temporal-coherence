@@ -503,7 +503,7 @@ class PreprocessedDataGenerator():
             return self._current_video_to_save, self._generated_frames_to_save, previous_video_path_id
     
     # TODO: refactor to make only one generate video method
-    def generate_diff_batch(self):
+    def generate_diff_video(self):
         previous_video_index = self.current_video_index
         previous_video_path_id = self.path_id()
         previous_frames, current_frames, _, _, previous_generated_frames, generated_frames, _, _, _ = self._get_all_inputs()
@@ -522,8 +522,8 @@ class PreprocessedDataGenerator():
             self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_diff])
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_diff])
             # store current video frames
-            self._generated_frames_to_save = generated_frames[split_position:]
-            self._current_video_to_save = current_frames[split_position:]
-            return self._current_video_to_save, self._generated_frames_to_save, previous_video_path_id
+            self._generated_frames_to_save = generated_frames[split_position:] - previous_generated_frames[split_position:]
+            self._current_video_to_save = current_frames[split_position:] - previous_frames[split_position:]
+        return self._current_video_to_save, self._generated_frames_to_save, previous_video_path_id
 
             
