@@ -2,6 +2,7 @@ import cv2
 import tensorflow as tf
 import pylops
 import numpy as np
+from normalize import normalize_images, images_from_normalized
 
 def denoise_video(frames):
     frames = frames.numpy()
@@ -58,4 +59,9 @@ def deblur_video(frames):
         deblurred_frames.append(deblurred_frame)
     deblurred_frames = tf.stack(deblurred_frames)
     deblurred_frames = tf.cast(deblurred_frames, tf.uint8)
-    return deblurred_frames        
+    return deblurred_frames
+
+def blend_frames(previous_frame, current_frame, next_frame):
+    blended_frame = (0.5*previous_frame) + (0.5*current_frame)
+    blended_frame = (0.5*blended_frame) + (0.5*next_frame)
+    return blended_frame
