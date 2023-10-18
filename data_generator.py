@@ -46,6 +46,7 @@ class PreprocessedDataGenerator():
         self._first_batch_first_frames =  None
         self._first_batch_deformed_frames =  None
         self._first_batch_displacements  =  None
+        self._first_previous_generated_frames =  None
         self._generated_frames_to_save = self.current_video[0:0]
         self._current_video_to_save = self.current_video[0:0]
         self._deformed_frames_to_save = self.current_video[0:0]
@@ -169,7 +170,7 @@ class PreprocessedDataGenerator():
                 if not self.repeat:
                     self.stop_iteration = True
         
-        generated_frames = self.generator([batch_first_frames, batch_deformed_frames, batch_displacements])
+        generated_frames = self.generator([batch_first_frames, batch_previous_frames, batch_deformed_frames, batch_displacements])
         previous_generated_frames = np.concatenate([self.last_generated_frame, generated_frames[:-1]])
         self.last_generated_frame = generated_frames[-1:]
 
@@ -237,16 +238,16 @@ class PreprocessedDataGenerator():
             self._first_batch_frames,
             _,
             _,
-            previous_generated_frames,
+            self._first_previous_generated_frames,
             generated_frames,
             self._first_batch_first_frames,
             self._first_batch_deformed_frames,
             self._first_batch_displacements) = self._get_all_inputs()
-            return previous_generated_frames, generated_frames, self._first_batch_frames
+            return self._first_previous_generated_frames, generated_frames, self._first_batch_frames
         else:
-            generated_frames = self.generator([self._first_batch_first_frames, self._first_batch_deformed_frames, self._first_batch_displacements])
-            previous_generated_frames = np.concatenate([self._first_batch_first_frames[0:1], generated_frames[:-1]])
-            return previous_generated_frames, generated_frames, self._first_batch_frames
+            generated_frames = self.generator([self._first_batch_first_frames, self._first_previous_generated_frames, self._first_batch_deformed_frames, self._first_batch_displacements])
+            self._first_previous_generated_frames = np.concatenate([self._first_batch_first_frames[0:1], generated_frames[:-1]])
+            return self._first_previous_generated_frames, generated_frames, self._first_batch_frames
     
     def next_loss(self):
         (previous_frames,
