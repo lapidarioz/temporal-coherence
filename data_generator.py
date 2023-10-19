@@ -20,7 +20,8 @@ class PreprocessedDataGenerator():
                 batch_size=1,
                 landmark_detector=None,
                 repeat=False,
-                save_path=None):
+                save_path=None,
+                blend_deformation=False):
         if landmark_detector:
             self.landmark_detector = landmark_detector
         else:
@@ -35,6 +36,7 @@ class PreprocessedDataGenerator():
         self.stop_iteration = False
         self.repeat = repeat
         self.save_path = save_path
+        self.blend_deformation = blend_deformation
         self._restart()
     
     def _restart(self):
@@ -106,6 +108,10 @@ class PreprocessedDataGenerator():
                 self._current_source_landmarks[0],
                 self._current_source_landmarks[i]
             )
+        if self.blend_deformation:
+            previous_deformed_frames = np.concatenate((self._deformed_frames[0:1], self._deformed_frames[:-1]))
+            next_deformed_frames = np.concatenate((self._deformed_frames[1:], self._deformed_frames[-1:]))
+            self._deformed_frames = blend_frames(previous_deformed_frames, self._deformed_frames, next_deformed_frames)
     
     def _compute_current_displacements(self):
         self.displacements = compute_displacements_interpolation(
@@ -195,8 +201,8 @@ class PreprocessedDataGenerator():
         return previous_generated_frames, generated_frames - previous_generated_frames, current_frames - previous_frames
     
     def blended_diff_batch(self):
-        previous_frames, current_frames, _, _, previous_generated_frames, generated_frames, _, _, _, blended_frames = self._get_all_inputs_blended()
-        return previous_generated_frames, generated_frames - previous_generated_frames, blended_frames - previous_frames
+        previous_frames, current_frames, _, _, _, _, _, _, _, blended_frames, previous_blended_frames = self._get_all_inputs_blended()
+        return previous_blended_frames, blended_frames - previous_blended_frames, current_frames - previous_frames
     
     def get_deformed_diff_batch(self):
         if self.stop_iteration:
@@ -455,8 +461,47 @@ class PreprocessedDataGenerator():
         generated_frames,
         _,
         deformed_frames,
+        _) = self._get_all_inputs()
+
+        if self.current_video_index == previous_video_index:
+            self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames])
+            self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames])
+            self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames])
+        else:
+            # TODO: fix when video has less than batch_size frames
+            split_position = self.batch_size - self.current_frame_index
+            self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames[:split_position]])
+            self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:split_position]])
+            self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames[:split_position]])
+            # save previous videos
+            if self.save_path:
+                output_folder = Path(self.save_path) / previous_video_path
+            else:
+                raise ValueError("save_path must be set")
+            output_folder.mkdir(parents=True, exist_ok=True)
+            save_gif(self._generated_frames_to_save, output_folder / f"{previous_video_index}_generated.gif")
+            save_gif(self._current_video_to_save, output_folder / f"{previous_video_index}_groundtruth.gif")
+            save_gif(self._deformed_frames_to_save, output_folder / f"{previous_video_index}_deformed.gif")
+            # store current video frames
+            self._generated_frames_to_save = generated_frames[split_position:]
+            self._current_video_to_save = current_frames[split_position:]
+            self._deformed_frames_to_save = deformed_frames[split_position:]
+    
+    # TODO: refactor to make only one generate video method
+    def save_next_blended_video(self):
+        previous_video_index = self.current_video_index
+        previous_video_path = self.current_video_relative_path()
+        (_,
+        current_frames,
         _,
-        blend_frames) = self._get_all_inputs_blended()
+        _,
+        _,
+        generated_frames,
+        _,
+        deformed_frames,
+        _,
+        blend_frames,
+        _) = self._get_all_inputs_blended()
 
         if self.current_video_index == previous_video_index:
             self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames])
@@ -495,11 +540,38 @@ class PreprocessedDataGenerator():
         _,
         _,
         _,
-        generated_frames,
         _,
         _,
         _,
-        blend_frames) = self._get_all_inputs_blended()
+        _) = self._get_all_inputs()
+
+        if self.current_video_index == previous_video_index:
+            self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames])
+            return None, None, None
+        else:
+            # TODO: fix when video has less than batch_size frames
+            split_position = self.batch_size - self.current_frame_index
+            self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:split_position]])
+            # store current video frames
+            self._current_video_to_save = current_frames[split_position:]
+            return self._current_video_to_save, self._generated_frames_to_save, previous_video_path_id
+    
+
+    # TODO: refactor to make only one generate video method
+    def generate_next_blended_video(self):
+        previous_video_index = self.current_video_index
+        previous_video_path_id = self.path_id()
+        (_,
+        current_frames,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        blend_frames,
+        _) = self._get_all_inputs_blended()
 
         if self.current_video_index == previous_video_index:
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames])
@@ -551,7 +623,9 @@ class PreprocessedDataGenerator():
         batch_displacements) = self._get_all_inputs()
 
         next_generated_frames = np.concatenate([generated_frames[1:], generated_frames[-1:]])
+        previous_previous_generated_frames = np.concatenate([previous_generated_frames[0:1], previous_generated_frames[:-1]])
         blended_frames = blend_frames(previous_generated_frames, generated_frames, next_generated_frames)
+        previous_blended_frames = blend_frames(previous_previous_generated_frames, previous_generated_frames, generated_frames)
 
         return (batch_previous_frames,
         batch_frames,
@@ -562,9 +636,10 @@ class PreprocessedDataGenerator():
         batch_first_frames,
         batch_deformed_frames,
         batch_displacements,
-        blended_frames)
+        blended_frames,
+        previous_blended_frames)
 
     
     def blended_next_batch(self):
-        _, current_frames, _, _, _, _, _, _, _, blended_frames = self._get_all_inputs_blended()
+        _, current_frames, _, _, _, _, _, _, _, blended_frames, _ = self._get_all_inputs_blended()
         return blended_frames, current_frames
