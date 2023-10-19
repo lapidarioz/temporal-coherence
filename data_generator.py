@@ -643,3 +643,15 @@ class PreprocessedDataGenerator():
     def blended_next_batch(self):
         _, current_frames, _, _, _, _, _, _, _, blended_frames, _ = self._get_all_inputs_blended()
         return blended_frames, current_frames
+    
+    def deformed_next_batch(self):
+        (_,
+        batch_frames,
+        _,
+        _,
+        _,
+        _,
+        _,
+        batch_deformed_frames,
+        _) = self._get_all_inputs()
+        return batch_deformed_frames, batch_frames
