@@ -54,6 +54,7 @@ class PreprocessedDataGenerator():
         self._current_video_to_save = self.current_video[0:0]
         self._deformed_frames_to_save = self.current_video[0:0]
         self._blended_frames_to_save = self.current_video[0:0]
+        self._previous_generated_frames = self.n_first_frames(self.batch_size)
     
     def _load_current_video(self):
         while True:
@@ -178,8 +179,9 @@ class PreprocessedDataGenerator():
                 if not self.repeat:
                     self.stop_iteration = True
         
-        generated_frames = self.generator([batch_first_frames, batch_previous_frames, batch_deformed_frames, batch_displacements])
+        generated_frames = self.generator([batch_first_frames, self._previous_generated_frames, batch_deformed_frames, batch_displacements])
         previous_generated_frames = np.concatenate([self.last_generated_frame, generated_frames[:-1]])
+        self._previous_generated_frames = previous_generated_frames
         self.last_generated_frame = generated_frames[-1:]
 
         return (batch_previous_frames,
