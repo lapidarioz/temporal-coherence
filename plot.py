@@ -80,9 +80,9 @@ def plot_results_rgb(sample_target, gen_output, save_path=None):
       save_gif_rgb(display_list[i], save_path / f"sample_{title[i]}.gif")
     plot_sequence(display_list[i], save_path=plot_path)
 
-def plot_results(sample_target, sample_input, gen_output, save_path=None):
-  display_list = [sample_input, sample_target, gen_output]
-  title = ['Input Sequence', 'Ground Truth', 'Predicted Sequence']
+def plot_results(sample_target, gen_output, save_path=None):
+  display_list = [sample_target, gen_output]
+  title = ['Ground Truth', 'Predicted Sequence']
 
   for i in range(len(display_list)):
     tf.print(title[i])

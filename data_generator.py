@@ -194,7 +194,7 @@ class PreprocessedDataGenerator():
 
     def generate_next_batch(self):
         _, current_frames, _, _, previous_generated_frames, generated_frames, _, _, _ = self._get_all_inputs()
-        return previous_generated_frames, generated_frames, current_frames
+        return generated_frames, current_frames
 
     
     def generate_diff_batch(self):
