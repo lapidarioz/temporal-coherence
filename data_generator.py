@@ -472,7 +472,7 @@ class PreprocessedDataGenerator():
             self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames])
         else:
             # TODO: fix when video has less than batch_size frames
-            split_position = self.batch_size - self.current_frame_index
+            split_position = self.batch_size - self.current_frame_index + 1
             self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames[:split_position]])
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:split_position]])
             self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames[:split_position]])
@@ -513,7 +513,7 @@ class PreprocessedDataGenerator():
             self._blended_frames_to_save = np.concatenate([self._blended_frames_to_save, blend_frames])
         else:
             # TODO: fix when video has less than batch_size frames
-            split_position = self.batch_size - self.current_frame_index
+            split_position = self.batch_size - self.current_frame_index + 1
             self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames[:split_position]])
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:split_position]])
             self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames[:split_position]])
@@ -553,7 +553,7 @@ class PreprocessedDataGenerator():
             return None, None, None
         else:
             # TODO: fix when video has less than batch_size frames
-            split_position = self.batch_size - self.current_frame_index
+            split_position = self.batch_size - self.current_frame_index + 1
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:split_position]])
             # store current video frames
             self._current_video_to_save = current_frames[split_position:]
@@ -582,7 +582,7 @@ class PreprocessedDataGenerator():
             return None, None, None
         else:
             # TODO: fix when video has less than batch_size frames
-            split_position = self.batch_size - self.current_frame_index
+            split_position = self.batch_size - self.current_frame_index + 1
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:split_position]])
             self._blended_frames_to_save = np.concatenate([self._blended_frames_to_save, blend_frames[:split_position]])
             # store current video frames
@@ -604,7 +604,7 @@ class PreprocessedDataGenerator():
             return None, None, None
         else:
             # TODO: fix when video has less than batch_size frames
-            split_position = self.batch_size - self.current_frame_index
+            split_position = self.batch_size - self.current_frame_index + 1
             generated_diff = generated_frames[:split_position] - previous_generated_frames[:split_position]
             current_diff = current_frames[:split_position] - previous_frames[:split_position]
             self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_diff])
