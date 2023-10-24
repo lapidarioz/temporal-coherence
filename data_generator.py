@@ -346,6 +346,7 @@ class PreprocessedDataGenerator():
             self._first_previous_generated_frames = np.concatenate([self._first_batch_first_frames[0:1], generated_frames[:-1]])
             return self._first_previous_generated_frames, generated_frames, self._first_batch_frames, self._first_batch_previous_deformed_frames
     
+    # TODO: only one next loss method
     def next_loss(self):
         (previous_frames,
         current_frames,
@@ -354,6 +355,35 @@ class PreprocessedDataGenerator():
         previous_generated_frames,
         generated_frames,
         _, _, _) = self._get_all_inputs()
+        previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_generated_frames)
+        current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
+        frames_diff = current_frames - previous_frames
+        generated_diff = generated_frames - previous_generated_frames
+        disc_real_output = self.discriminator([previous_frames, current_frames, frames_diff], training=True)
+        disc_generated_output = self.discriminator([previous_generated_frames, generated_frames, generated_diff], training=True)
+        disc_loss_value = self.discriminator_loss_function(disc_real_output, disc_generated_output)
+        total_gen_loss, other_loss = self.generator_loss_function(
+            disc_generated_output,
+            previous_generated_frames,
+            generated_frames,
+            previous_frames,
+            current_frames,
+            previous_landmarks,
+            current_landmarks,
+            previous_gen_landmarks,
+            current_gen_landmarks
+        )        
+        return total_gen_loss, disc_loss_value, other_loss
+    
+    # TODO: only one next loss method
+    def next_loss_deformed(self):
+        (previous_frames,
+        current_frames,
+        previous_landmarks,
+        current_landmarks,
+        previous_generated_frames,
+        generated_frames,
+        _, _, _, _) = self._get_all_inputs_deformed()
         previous_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(previous_generated_frames)
         current_gen_landmarks = self.landmark_detector.preprocess_and_detect_landmarks(generated_frames)
         frames_diff = current_frames - previous_frames
