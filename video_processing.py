@@ -65,3 +65,17 @@ def blend_frames(previous_frame, current_frame, next_frame):
     blended_frame = (0.5*previous_frame) + (0.5*current_frame)
     blended_frame = (0.5*blended_frame) + (0.5*next_frame)
     return blended_frame
+
+def increase_frame_rate(frames):
+    frames = np.insert(frames, 0, frames[0], axis=0)
+    frames = np.append(frames, frames[-1:], axis=0)
+    increased_frame_rate = []
+    for i in range(len(frames)-2):
+        previous_frame = frames[i]
+        current_frame = frames[i+1]
+        next_frame = frames[i+2]
+        blended_frame = blend_frames(previous_frame, current_frame, next_frame)
+        increased_frame_rate.append(blended_frame)
+        increased_frame_rate.append(current_frame)
+    increased_frame_rate = tf.stack(increased_frame_rate)
+    return increased_frame_rate

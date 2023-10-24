@@ -7,7 +7,7 @@ from transformation import deform
 from plot import plot_normalized_sequence, plot_landmarks, plot_triangles, save_gif
 from pathlib import Path
 from settings.facial import DEFAULT_TRIANGULATION
-from video_processing import blend_frames
+from video_processing import blend_frames, increase_frame_rate
 
 class PreprocessedDataGenerator():
 
@@ -483,6 +483,46 @@ class PreprocessedDataGenerator():
                 raise ValueError("save_path must be set")
             output_folder.mkdir(parents=True, exist_ok=True)
             save_gif(self._generated_frames_to_save, output_folder / f"{previous_video_index}_generated.gif")
+            save_gif(self._current_video_to_save, output_folder / f"{previous_video_index}_groundtruth.gif")
+            save_gif(self._deformed_frames_to_save, output_folder / f"{previous_video_index}_deformed.gif")
+            # store current video frames
+            self._generated_frames_to_save = generated_frames[split_position:]
+            self._current_video_to_save = current_frames[split_position:]
+            self._deformed_frames_to_save = deformed_frames[split_position:]
+        
+    # TODO: refactor to make only one generate video method
+    def save_next_video_more_frames(self):
+        previous_video_index = self.current_video_index
+        previous_video_path = self.current_video_relative_path()
+        (_,
+        current_frames,
+        _,
+        _,
+        _,
+        generated_frames,
+        _,
+        deformed_frames,
+        _) = self._get_all_inputs()
+
+        if self.current_video_index == previous_video_index:
+            self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames])
+            self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames])
+            self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames])
+        else:
+            # TODO: fix when video has less than batch_size frames
+            split_position = self.batch_size - self.current_frame_index + 1
+            self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames[:split_position]])
+            self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:split_position]])
+            self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames[:split_position]])
+            # save previous videos
+            if self.save_path:
+                output_folder = Path(self.save_path) / previous_video_path
+            else:
+                raise ValueError("save_path must be set")
+            output_folder.mkdir(parents=True, exist_ok=True)
+            save_gif(self._generated_frames_to_save, output_folder / f"{previous_video_index}_generated.gif")
+            more_frames = increase_frame_rate(self._generated_frames_to_save)
+            save_gif(more_frames, output_folder / f"{previous_video_index}_generated_more_frames.gif")
             save_gif(self._current_video_to_save, output_folder / f"{previous_video_index}_groundtruth.gif")
             save_gif(self._deformed_frames_to_save, output_folder / f"{previous_video_index}_deformed.gif")
             # store current video frames
