@@ -136,6 +136,7 @@ class PreprocessedDataGenerator():
     def _current_video_has_next_frame(self):
         return self.current_frame_index < len(self.current_video)
     
+    # TODO: only one method for all types of inputs
     def _get_all_inputs(self):
         if self.stop_iteration:
             raise StopIteration
@@ -193,6 +194,68 @@ class PreprocessedDataGenerator():
                 batch_first_frames,
                 batch_deformed_frames,
                 batch_displacements)
+    
+     # TODO: only one method for all types of inputs
+    def _get_all_inputs_deformed(self):
+        if self.stop_iteration:
+            raise StopIteration
+        
+        if not self._current_video_has_next_frame() and self._has_next_video():
+            self._load_next_video()
+        
+        begin_batch = self.current_frame_index
+        end_batch = begin_batch+self.batch_size
+        begin_previous = begin_batch-1
+        batch_frames = self.current_video[begin_batch:end_batch]
+        batch_landmarks = self._landmarks[begin_batch:end_batch]
+        batch_first_frames = self.n_first_frames(len(batch_frames))
+        batch_deformed_frames = self._deformed_frames[begin_batch:end_batch]
+        batch_displacements = self.displacements[begin_batch:end_batch]
+        end_previous = begin_previous+len(batch_frames)
+        batch_previous_frames = self.current_video[begin_previous:end_previous]
+        batch_previous_landmarks = self._landmarks[begin_previous:end_previous]
+        batch_previous_deformed_frames = self._deformed_frames[begin_previous:end_previous]
+        self.current_frame_index += len(batch_frames)
+        while len(batch_frames) < self.batch_size:
+            if self._has_next_video():
+                self._load_next_video()
+                if self._current_video_has_two_frames():
+                    n_frames = len(batch_frames)
+                    n_remaning = self.batch_size - n_frames
+                    begin_batch = self.current_frame_index
+                    end_batch = begin_batch+n_remaning
+                    begin_previous = begin_batch-1
+                    batch_frames = np.concatenate([batch_frames, self.current_video[begin_batch:end_batch]])
+                    batch_landmarks = np.concatenate([batch_landmarks, self._landmarks[begin_batch:end_batch]])
+                    batch_deformed_frames = np.concatenate([batch_deformed_frames, self._deformed_frames[begin_batch:end_batch]])
+                    batch_displacements = np.concatenate([batch_displacements, self.displacements[begin_batch:end_batch]])
+                    n_added_frames = len(batch_frames) - n_frames
+                    batch_first_frames = np.concatenate([batch_first_frames, self.n_first_frames(n_added_frames)])
+                    end_previous = begin_previous+n_added_frames
+                    batch_previous_frames = np.concatenate([batch_previous_frames, self.current_video[begin_previous:end_previous]])
+                    batch_previous_landmarks = np.concatenate([batch_previous_landmarks, self._landmarks[begin_previous:end_previous]])
+                    batch_previous_deformed_frames = np.concatenate([batch_previous_deformed_frames, self._deformed_frames[begin_previous:end_previous]])
+                    self.current_frame_index += n_added_frames
+            else:
+                self._restart() # don't stop iteration in the middle of a batch
+                if not self.repeat:
+                    self.stop_iteration = True
+        
+        generated_frames = self.generator([batch_first_frames, batch_previous_deformed_frames, batch_deformed_frames, batch_displacements])
+        previous_generated_frames = np.concatenate([self.last_generated_frame, generated_frames[:-1]])
+        self._previous_generated_frames = previous_generated_frames
+        self.last_generated_frame = generated_frames[-1:]
+
+        return (batch_previous_frames,
+                batch_frames,
+                batch_previous_landmarks,
+                batch_landmarks,
+                previous_generated_frames,
+                generated_frames,
+                batch_first_frames,
+                batch_deformed_frames,
+                batch_displacements,
+                batch_previous_deformed_frames)
 
     def generate_next_batch(self):
         _, current_frames, _, _, previous_generated_frames, generated_frames, _, _, _ = self._get_all_inputs()
@@ -263,6 +326,25 @@ class PreprocessedDataGenerator():
             generated_frames = self.generator([self._first_batch_first_frames, self._first_previous_generated_frames, self._first_batch_deformed_frames, self._first_batch_displacements])
             self._first_previous_generated_frames = np.concatenate([self._first_batch_first_frames[0:1], generated_frames[:-1]])
             return self._first_previous_generated_frames, generated_frames, self._first_batch_frames
+    
+    def generate_first_batch_deformed(self):
+        if self._first_batch_frames is None:
+            # self._restart()
+            (_,
+            self._first_batch_frames,
+            _,
+            _,
+            self._first_previous_generated_frames,
+            generated_frames,
+            self._first_batch_first_frames,
+            self._first_batch_deformed_frames,
+            self._first_batch_displacements,
+            self._first_batch_previous_deformed_frames) = self._get_all_inputs_deformed()
+            return self._first_previous_generated_frames, generated_frames, self._first_batch_frames, self._first_batch_previous_deformed_frames
+        else:
+            generated_frames = self.generator([self._first_batch_first_frames, self._first_batch_previous_deformed_frames, self._first_batch_deformed_frames, self._first_batch_displacements])
+            self._first_previous_generated_frames = np.concatenate([self._first_batch_first_frames[0:1], generated_frames[:-1]])
+            return self._first_previous_generated_frames, generated_frames, self._first_batch_frames, self._first_batch_previous_deformed_frames
     
     def next_loss(self):
         (previous_frames,
