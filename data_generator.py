@@ -344,7 +344,7 @@ class PreprocessedDataGenerator():
         else:
             generated_frames = self.generator([self._first_batch_first_frames, self._first_batch_previous_deformed_frames, self._first_batch_deformed_frames, self._first_batch_displacements])
             self._first_previous_generated_frames = np.concatenate([self._first_batch_first_frames[0:1], generated_frames[:-1]])
-            return self._first_previous_generated_frames, generated_frames, self._first_batch_frames, self._first_batch_previous_deformed_frames
+            return self._first_previous_generated_frames, generated_frames, self._first_batch_frames
     
     # TODO: only one next loss method
     def next_loss(self):
