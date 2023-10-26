@@ -810,3 +810,12 @@ class PreprocessedDataGenerator():
         batch_deformed_frames,
         _) = self._get_all_inputs()
         return batch_deformed_frames, batch_frames
+    
+    def n_total_frames(self):
+        n_frames = 0
+        while self._has_next_video():
+            n_frames += len(self.current_video)
+            self._load_next_video()
+        self._restart()
+        return n_frames
+
