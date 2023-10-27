@@ -1507,7 +1507,7 @@ QUALITATIVE_TRAIN_PATHS = [
     '../data/mug128/031/sadness/take000/video.npy',
     '../data/mug128/082/surprise/take000/video.npy',
     '../data/mug128/071/anger/take001/video.npy',
-    '../data/mug128/073/surprise/take001/video.npy'
+    '../data/mug128/073/surprise/take001/video.npy',
     '../data/mug128/006/anger/take000/video.npy',
     '../data/mug128/033/fear/take004nsg/video.npy',
     '../data/mug128/036/surprise/take004/video.npy',
