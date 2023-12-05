@@ -141,8 +141,11 @@ class PreprocessedDataGenerator():
         if self.stop_iteration:
             raise StopIteration
         
-        if not self._current_video_has_next_frame() and self._has_next_video():
-            self._load_next_video()
+        if not self._current_video_has_next_frame():
+            if self._has_next_video():
+                self._load_next_video()
+            else:
+                raise StopIteration
         
         begin_batch = self.current_frame_index
         end_batch = begin_batch+self.batch_size
@@ -695,20 +698,23 @@ class PreprocessedDataGenerator():
         _,
         _,
         _,
-        _,
+        generated_frames,
         _,
         _,
         _) = self._get_all_inputs()
 
         if self.current_video_index == previous_video_index:
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames])
+            self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames])
             return None, None, None
         else:
             # TODO: fix when video has less than batch_size frames
             split_position = self.batch_size - self.current_frame_index + 1
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:split_position]])
+            self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames[:split_position]])
             # store current video frames
             self._current_video_to_save = current_frames[split_position:]
+            self._generated_frames_to_save = generated_frames[split_position:]
             return self._current_video_to_save, self._generated_frames_to_save, previous_video_path_id
     
 
