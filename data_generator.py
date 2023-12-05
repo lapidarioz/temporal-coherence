@@ -7,7 +7,7 @@ from transformation import deform
 from plot import plot_normalized_sequence, plot_landmarks, plot_triangles, save_gif
 from pathlib import Path
 from settings.facial import DEFAULT_TRIANGULATION
-from video_processing import blend_frames, increase_frame_rate, denoise_video
+from video_processing import blend_frames, increase_frame_rate
 
 class PreprocessedDataGenerator():
 
@@ -785,8 +785,8 @@ class PreprocessedDataGenerator():
 
         next_generated_frames = np.concatenate([generated_frames[1:], generated_frames[-1:]])
         previous_previous_generated_frames = np.concatenate([previous_generated_frames[0:1], previous_generated_frames[:-1]])
-        blended_frames = denoise_video(generated_frames)
-        previous_blended_frames = denoise_video(previous_generated_frames)
+        blended_frames = blend_frames(previous_generated_frames, generated_frames, next_generated_frames)
+        previous_blended_frames = blend_frames(previous_previous_generated_frames, previous_generated_frames, generated_frames)
 
         return (batch_previous_frames,
         batch_frames,
