@@ -88,18 +88,3 @@ def curve_model_s(image, landmarks):
     g_lower_upper_lip - g_upper_lower_lip,
     g_upper_lower_lip - g_lower_lower_lip
     )
-
-def main():
-    images = [
-        np.hstack(curve_model_s('./data/images/mug/s001/happiness.jpg')),
-        np.hstack(curve_model_s('./data/images/mug/s001/neutral.jpg')),
-        np.hstack(curve_model_s('./data/images/mug/s002/happiness.jpg')),
-        np.hstack(curve_model_s('./data/images/mug/s002/neutral.jpg'))
-    ]
-    df = pd.DataFrame(images)
-    print(df.mean())
-    print(df.std())
-    
-
-if __name__ == '__main__':
-    main()
