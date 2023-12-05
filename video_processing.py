@@ -5,6 +5,7 @@ import numpy as np
 from normalize import normalize_images, images_from_normalized
 
 def denoise_video(frames):
+    frames = images_from_normalized(frames)
     frames = frames.numpy()
     denoised_frames = []
     for frame in frames:
@@ -13,7 +14,8 @@ def denoise_video(frames):
         denoised_frame = cv2.cvtColor(denoised_frame, cv2.COLOR_BGR2RGB)
         denoised_frames.append(denoised_frame)
     denoised_frames = tf.stack(denoised_frames)
-    denoised_frames = tf.cast(denoised_frames, tf.uint8)
+    denoised_frames = tf.cast(denoised_frames, tf.float32)
+    denoised_frames = normalize_images(denoised_frames)
     return denoised_frames
 
 def deblur_image(im): # TODO: change to use cupy
@@ -38,6 +40,7 @@ def deblur_image(im): # TODO: change to use cupy
 
 
 def sharpen_video(frames):
+    frames = images_from_normalized(frames)
     frames = frames.numpy()
     sharpened_frames = []
     for frame in frames:
@@ -46,19 +49,23 @@ def sharpen_video(frames):
         sharpened_frame = cv2.cvtColor(sharpened_frame, cv2.COLOR_BGR2RGB)
         sharpened_frames.append(sharpened_frame)
     sharpened_frames = tf.stack(sharpened_frames)
-    sharpened_frames = tf.cast(sharpened_frames, tf.uint8)
+    sharpened_frames = tf.cast(sharpened_frames, tf.float32)
+    sharpened_frames = normalize_images(sharpened_frames)
     return sharpened_frames
 
 def deblur_video(frames):
+    frames = images_from_normalized(frames)
     frames = frames.numpy()
     deblurred_frames = []
     for frame in frames:
         bgr_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        print(bgr_frame.shape)
         deblurred_frame = deblur_image(bgr_frame)
         deblurred_frame = cv2.cvtColor(deblurred_frame, cv2.COLOR_BGR2RGB)
         deblurred_frames.append(deblurred_frame)
     deblurred_frames = tf.stack(deblurred_frames)
-    deblurred_frames = tf.cast(deblurred_frames, tf.uint8)
+    deblurred_frames = tf.cast(deblurred_frames, tf.float32)
+    deblurred_frames = normalize_images(deblurred_frames)
     return deblurred_frames
 
 def blend_frames(previous_frame, current_frame, next_frame):
