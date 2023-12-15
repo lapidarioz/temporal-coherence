@@ -58,3 +58,47 @@ def similar_index(query_paths, search_paths, output_folder):
         output_path = str(output_folder / f"{expression_name}.csv")
         similar_index_df.to_csv(output_path)
         print(f"Similar index for {expression_name} saved in {output_path}")
+    
+
+def compute_similar_measures(videos_path, landmark_detector):
+    measures_similar = []
+    for i in trange(len(videos_path), desc="Computing similar measures"):
+        video = np.load(videos_path[i])
+        landmarks = landmark_detector.preprocess_and_detect_landmarks_numpy(video[0:1])
+        measure = curve_model_s(video[0], landmarks[0])
+        flatten_measure = tuple(chain.from_iterable(measure))
+        measures_similar.append({
+            "video_path": videos_path[i],
+            "measure": np.array(flatten_measure)
+        })
+    measure_df = measures_similar = pd.DataFrame(measures_similar)
+    measure_df = measure_df.set_index('video_path')
+    return measure_df
+
+
+def compute_similar_measures_with_query(query_paths, search_paths, remove_query_subject=False):
+    similar_index_list = []
+    similar_index_expression_dict = {}
+    query_curve_measures_df = curve_measures(query_paths)
+    for expression_name in FACIAL_EXPRESSION_NAMES:
+        search_expression_search_paths = select_facial_expression(search_paths, expression_name)
+        search_curve_measures_df = curve_measures(search_expression_search_paths)
+        for i in trange(len(query_curve_measures_df), desc=f"Generating {expression_name} similar videos index"):
+            query_metric = np.array(query_curve_measures_df.iloc[i]["measure"])
+            query_path = query_curve_measures_df.iloc[i]["video_path"]
+            if remove_query_subject:
+                search_df = remove_query_subjects(search_curve_measures_df, query_path)
+            else:
+                search_df = search_curve_measures_df
+            curve_measures_array = np.array(search_df["measure"].values.tolist())
+            most_curve_measures = np.sum(np.abs(curve_measures_array - query_metric), axis=1)
+            most_similar_videos_ids = np.argsort(most_curve_measures, axis=0)
+            most_similar_video_path = search_df.iloc[most_similar_videos_ids[0]]["video_path"]
+            similar_index_list.append({
+                "video_path": query_path,
+                "similar_video_path": most_similar_video_path,
+            })
+        similar_index_df = pd.DataFrame(similar_index_list)
+        similar_index_df = similar_index_df.set_index('video_path')
+        similar_index_expression_dict[expression_name] = similar_index_df
+    return similar_index_expression_dict

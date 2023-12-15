@@ -12,6 +12,7 @@ import pandas as pd
 from curve_based import curve_model_s
 from itertools import chain
 from tqdm.notebook import tqdm, trange
+from similar import compute_similar_measures, compute_similar_measures_with_query, select_facial_expression
 
 class PreprocessedDataGenerator():
 
@@ -26,7 +27,9 @@ class PreprocessedDataGenerator():
                 repeat=False,
                 save_path=None,
                 blend_deformation=False,
-                search_similar=False):
+                search_similar=False,
+                similar_source_videos_path=None,
+                expression_name=None,):
         if landmark_detector:
             self.landmark_detector = landmark_detector
         else:
@@ -44,6 +47,8 @@ class PreprocessedDataGenerator():
         self.blend_deformation = blend_deformation
         self.search_similar = search_similar
         self._measures_similar = None
+        self._similar_source_videos_path = similar_source_videos_path
+        self._expression_name = expression_name
         self._restart()
     
     def _restart(self):
@@ -62,7 +67,7 @@ class PreprocessedDataGenerator():
         self._deformed_frames_to_save = self.current_video[0:0]
         self._blended_frames_to_save = self.current_video[0:0]
         self._previous_generated_frames = self.n_first_frames(self.batch_size)
-        self._similar_video_to_save = self.current_video[0:0]
+        # self._similar_video_to_save = self.current_video[0:0]
     
     def _load_current_video(self):
         while True:
@@ -76,7 +81,7 @@ class PreprocessedDataGenerator():
         self._current_source_video = self.current_video
         self._landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self.current_video)
         self._current_source_landmarks = self._landmarks
-        if self.search_similar:
+        if self.search_similar and self._expression_name:
             most_similar_path = self._find_similar_video()
             self._current_source_video = np.load(most_similar_path)
             self._current_source_landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self._current_source_video)
@@ -606,31 +611,34 @@ class PreprocessedDataGenerator():
             self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames])
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames])
             self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames])
-            if self.search_similar:
-                self._similar_video_to_save = np.concatenate([self._similar_video_to_save, self._current_source_video])
+            # if self.search_similar:
+            #     self._similar_video_to_save = np.concatenate([self._similar_video_to_save, self._current_source_video])
         else:
             # TODO: fix when video has less than batch_size frames
             split_position = self.batch_size - self.current_frame_index + 1
             self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames[:split_position]])
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:split_position]])
             self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames[:split_position]])
-            if self.search_similar:
-                self._similar_video_to_save = np.concatenate([self._similar_video_to_save, self._current_source_video[:split_position]])
+            # if self.search_similar:
+            #     self._similar_video_to_save = np.concatenate([self._similar_video_to_save, self._current_source_video[:split_position]])
             # save previous videos
             if self.save_path:
                 output_folder = Path(self.save_path) / previous_video_path
             else:
                 raise ValueError("save_path must be set")
+            if self.search_similar and self._expression_name:
+                output_folder = output_folder / self._expression_name
             output_folder.mkdir(parents=True, exist_ok=True)
             save_gif(self._generated_frames_to_save, output_folder / f"{previous_video_index}_generated.gif")
             save_gif(self._current_video_to_save, output_folder / f"{previous_video_index}_groundtruth.gif")
             save_gif(self._deformed_frames_to_save, output_folder / f"{previous_video_index}_deformed.gif")
-            if self.search_similar:
-                save_gif(self._similar_video_to_save, output_folder / f"{previous_video_index}_similar.gif")
+            # if self.search_similar:
+            #     save_gif(self._similar_video_to_save, output_folder / f"{previous_video_index}_similar.gif")
             # store current video frames
             self._generated_frames_to_save = generated_frames[split_position:]
             self._current_video_to_save = current_frames[split_position:]
             self._deformed_frames_to_save = deformed_frames[split_position:]
+            
         
     # TODO: refactor to make only one generate video method
     def save_next_video_more_frames(self):
@@ -650,29 +658,31 @@ class PreprocessedDataGenerator():
             self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames])
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames])
             self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames])
-            if self.search_similar:
-                self._similar_video_to_save = np.concatenate([self._similar_video_to_save, self._current_source_video])
+            # if self.search_similar:
+            #     self._similar_video_to_save = np.concatenate([self._similar_video_to_save, self._current_source_video])
         else:
             # TODO: fix when video has less than batch_size frames
             split_position = self.batch_size - self.current_frame_index + 1
             self._generated_frames_to_save = np.concatenate([self._generated_frames_to_save, generated_frames[:split_position]])
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:split_position]])
             self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames[:split_position]])
-            if self.search_similar:
-                self._similar_video_to_save = np.concatenate([self._similar_video_to_save, self._current_source_video[:split_position]])
+            # if self.search_similar:
+            #     self._similar_video_to_save = np.concatenate([self._similar_video_to_save, self._current_source_video[:split_position]])
             # save previous videos
             if self.save_path:
                 output_folder = Path(self.save_path) / previous_video_path
             else:
                 raise ValueError("save_path must be set")
+            if self.search_similar and self._expression_name:
+                output_folder = output_folder / self._expression_name
             output_folder.mkdir(parents=True, exist_ok=True)
             save_gif(self._generated_frames_to_save, output_folder / f"{previous_video_index}_generated.gif")
             more_frames = increase_frame_rate(self._generated_frames_to_save)
             save_gif(more_frames, output_folder / f"{previous_video_index}_generated_more_frames.gif")
             save_gif(self._current_video_to_save, output_folder / f"{previous_video_index}_groundtruth.gif")
             save_gif(self._deformed_frames_to_save, output_folder / f"{previous_video_index}_deformed.gif")
-            if self.search_similar:
-                save_gif(self._similar_video_to_save, output_folder / f"{previous_video_index}_similar.gif")
+            # if self.search_similar:
+            #     save_gif(self._similar_video_to_save, output_folder / f"{previous_video_index}_similar.gif")
             # store current video frames
             self._generated_frames_to_save = generated_frames[split_position:]
             self._current_video_to_save = current_frames[split_position:]
@@ -699,8 +709,8 @@ class PreprocessedDataGenerator():
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames])
             self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames])
             self._blended_frames_to_save = np.concatenate([self._blended_frames_to_save, blend_frames])
-            if self.search_similar:
-                self._similar_video_to_save = np.concatenate([self._similar_video_to_save, self._current_source_video])
+            # if self.search_similar:
+            #     self._similar_video_to_save = np.concatenate([self._similar_video_to_save, self._current_source_video])
         else:
             # TODO: fix when video has less than batch_size frames
             split_position = self.batch_size - self.current_frame_index + 1
@@ -708,20 +718,22 @@ class PreprocessedDataGenerator():
             self._current_video_to_save = np.concatenate([self._current_video_to_save, current_frames[:split_position]])
             self._deformed_frames_to_save = np.concatenate([self._deformed_frames_to_save, deformed_frames[:split_position]])
             self._blended_frames_to_save = np.concatenate([self._blended_frames_to_save, blend_frames[:split_position]])
-            if self.search_similar:
-                self._similar_video_to_save = np.concatenate([self._similar_video_to_save, self._current_source_video[:split_position]])
+            # if self.search_similar:
+            #     self._similar_video_to_save = np.concatenate([self._similar_video_to_save, self._current_source_video[:split_position]])
             # save previous videos
             if self.save_path:
                 output_folder = Path(self.save_path) / previous_video_path
             else:
                 raise ValueError("save_path must be set")
+            if self.search_similar and self._expression_name:
+                output_folder = output_folder / self._expression_name
             output_folder.mkdir(parents=True, exist_ok=True)
             save_gif(self._generated_frames_to_save, output_folder / f"{previous_video_index}_generated.gif")
             save_gif(self._current_video_to_save, output_folder / f"{previous_video_index}_groundtruth.gif")
             save_gif(self._deformed_frames_to_save, output_folder / f"{previous_video_index}_deformed.gif")
             save_gif(self._blended_frames_to_save, output_folder / f"{previous_video_index}_blended.gif")
-            if self.search_similar:
-                save_gif(self._similar_video_to_save, output_folder / f"{previous_video_index}_similar.gif")
+            # if self.search_similar:
+            #     save_gif(self._similar_video_to_save, output_folder / f"{previous_video_index}_similar.gif")
             # store current video frames
             self._generated_frames_to_save = generated_frames[split_position:]
             self._current_video_to_save = current_frames[split_position:]
@@ -864,31 +876,26 @@ class PreprocessedDataGenerator():
         self._restart()
         return n_frames
 
-    def _compute_similar_measures(self):
-        measures_similar = []
-        for i in trange(self.n, desc="Computing similar measures"):
-            video = np.load(self.videos_path[i])
-            landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(video[0:1])
-            measure = curve_model_s(video[0], landmarks[0])
-            flatten_measure = tuple(chain.from_iterable(measure))
-            measures_similar.append({
-                "id": i,
-                "measure": np.array(flatten_measure)
-            })
-        self._measures_similar = pd.DataFrame(measures_similar)
-        self._measures_similar.set_index('id') 
-
     def _find_similar_video(self):
-        if self._measures_similar is None:
-            self._compute_similar_measures()
-        most_similar_id = 0
-        target_subject = Path(self.videos_path[self.current_video_index]).parts[3]
-        most_similar_measure = np.mean(np.abs(self._measures_similar.iloc[most_similar_id]["measure"] - self._measures_similar.iloc[self.current_video_index]["measure"]))
-        for i in range(self.n):
-            searched_subject = Path(self.videos_path[i]).parts[3]
-            if i != self.current_video_index and target_subject != searched_subject:
-                searched_measure = np.mean(np.abs(self._measures_similar.iloc[i]["measure"] - self._measures_similar.iloc[most_similar_id]["measure"]))
-                if searched_measure > most_similar_measure:
-                    most_similar_id = i
-                    most_similar_measure = searched_measure
-        return self.videos_path[most_similar_id]
+        if self._similar_source_videos_path is None:
+            if self._measures_similar is None:
+                expression_videos_path = select_facial_expression(self.videos_path, self._expression_name)
+                self._measures_similar = compute_similar_measures(expression_videos_path, self.landmark_detector)
+            most_similar_path = self.videos_path[0]
+            target_subject = Path(self.videos_path[self.current_video_index]).parts[3]
+            current_video_path = self.videos_path[self.current_video_index]
+            most_similar_measure = np.mean(np.abs(self._measures_similar.loc[most_similar_path]["measure"] - self._measures_similar.loc[current_video_path]["measure"]))
+            for i in range(self.n):
+                searched_subject = Path(self.videos_path[i]).parts[3]
+                if i != self.current_video_index and target_subject != searched_subject:
+                    searched_measure = np.mean(np.abs(self._measures_similar.iloc[i]["measure"] - self._measures_similar.loc[most_similar_path]["measure"]))
+                    if searched_measure > most_similar_measure:
+                        most_similar_path = self.videos_path[i]
+                        most_similar_measure = searched_measure
+            return self.videos_path[most_similar_path]
+        else:
+            if self._measures_similar is None:
+                self._measures_similar = compute_similar_measures_with_query(self.videos_path, self._similar_source_videos_path)
+            current_video_path = self.videos_path[self.current_video_index]
+            return self._measures_similar[self._expression_name].loc[current_video_path].values[0]
+

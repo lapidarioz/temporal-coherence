@@ -1,7 +1,7 @@
 FACIAL_EXPRESSION_NAMES = [
-    "anger",
-    "sadness",
     "happiness",
+    "sadness",
+    "anger",
     "surprise",
     "disgust",
     "fear",
