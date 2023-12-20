@@ -879,20 +879,23 @@ class PreprocessedDataGenerator():
     def _find_similar_video(self):
         if self._similar_source_videos_path is None:
             if self._measures_similar is None:
-                expression_videos_path = select_facial_expression(self.videos_path, self._expression_name)
-                self._measures_similar = compute_similar_measures(expression_videos_path, self.landmark_detector)
-            most_similar_path = self.videos_path[0]
+                self.expression_videos_path = select_facial_expression(self.videos_path, self._expression_name)
+                self._measures_similar = compute_similar_measures(self.videos_path, self.landmark_detector)
+                self.n_expression_videos = len(self.expression_videos_path)
+                
+            most_similar_path = self.expression_videos_path[0]
             target_subject = Path(self.videos_path[self.current_video_index]).parts[3]
             current_video_path = self.videos_path[self.current_video_index]
             most_similar_measure = np.mean(np.abs(self._measures_similar.loc[most_similar_path]["measure"] - self._measures_similar.loc[current_video_path]["measure"]))
-            for i in range(self.n):
-                searched_subject = Path(self.videos_path[i]).parts[3]
-                if i != self.current_video_index and target_subject != searched_subject:
-                    searched_measure = np.mean(np.abs(self._measures_similar.iloc[i]["measure"] - self._measures_similar.loc[most_similar_path]["measure"]))
+            for i in range(self.n_expression_videos):
+                searched_subject = Path(self.expression_videos_path[i]).parts[3]
+                if target_subject != searched_subject:
+                    searched_path = self.expression_videos_path[i]
+                    searched_measure = np.mean(np.abs(self._measures_similar.loc[searched_path]["measure"] - self._measures_similar.loc[current_video_path]["measure"]))
                     if searched_measure > most_similar_measure:
-                        most_similar_path = self.videos_path[i]
+                        most_similar_path = self.expression_videos_path[i]
                         most_similar_measure = searched_measure
-            return self.videos_path[most_similar_path]
+            return most_similar_path
         else:
             if self._measures_similar is None:
                 self._measures_similar = compute_similar_measures_with_query(self.videos_path, self._similar_source_videos_path)
