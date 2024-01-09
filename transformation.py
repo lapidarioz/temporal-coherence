@@ -1,6 +1,6 @@
 import cv2 
 import numpy as np
-from settings.facial import DEFAULT_TRIANGULATION, MOUTH_TRIANGULATION
+from settings.facial import DEFAULT_TRIANGULATION, MOUTH_OPEN_TRIANGULATION
 from landmarks import add_boundary_points
 
 
@@ -69,8 +69,8 @@ def get_new_landmarks(source_landmarks_previous, source_landmarks_current, targe
 
 def warp_mouth(target_image, target_landmarks, source_image, source_landmarks):
     target_image_warped = copy_image(target_image)
-    source_triangles = source_landmarks[MOUTH_TRIANGULATION]
-    target_triangles = target_landmarks[MOUTH_TRIANGULATION]
+    source_triangles = source_landmarks[MOUTH_OPEN_TRIANGULATION]
+    target_triangles = target_landmarks[MOUTH_OPEN_TRIANGULATION]
     for current_source_triangle, current_target_triangle in zip(source_triangles,target_triangles):
         warp_triangle(source_image, target_image_warped, current_source_triangle, current_target_triangle)
     return target_image_warped
