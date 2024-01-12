@@ -1,0 +1,4 @@
+bind-addr: 0.0.0.0:7458
+auth: password
+hashed-password: "$argon2i$v=19$m=4096,t=3,p=1$HckMJIIUZOiNrq9oUilxDQ$iATj2m7w8FPGnlmKLTqx2eCHMWgwEm4Srab4P5p9JeY"
+cert: false

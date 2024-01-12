@@ -19,8 +19,11 @@ services:
       - $PARENTDIR/data:/home/jupyter/data
       - $PWD:/home/jupyter/app
       - $HOME/.vscode-server-tensorflow:/root/.vscode-server
+      - $PWD/code-server.yml:/root/.config/code-server/config.yaml
+      - $HOME/.gitconfig:/etc/gitconfig
     ports:
-      - 5555:5555" > $PWD/docker-compose.yml
+      - 5555:5555
+      - 7458:7458" > $PWD/docker-compose.yml
 
 
 docker compose build
