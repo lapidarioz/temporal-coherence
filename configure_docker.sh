@@ -2,6 +2,8 @@
 
 PARENTDIR="$(dirname "$PWD")"
 
+docker network create -d bridge jupyter
+
 echo "---
 version: \"3\"
 services:
@@ -24,7 +26,14 @@ services:
       - $HOME/.local/share/code-server/extensions:/root/.local/share/code-server/extensions
     ports:
       - 5555:5555
-      - 7458:7458" > $PWD/docker-compose.yml
+      - 7458:7458
+    networks:
+      - network1
+   
+networks:
+  network1:
+    name: jupyter
+    external: true" > $PWD/docker-compose.yml
 
 
 docker compose build
