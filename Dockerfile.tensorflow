@@ -50,5 +50,5 @@ COPY requirements.txt /home/jupyter/
 
 RUN pip install -r requirements.txt
 
-# ENTRYPOINT ["jupyter", "lab","--ip=0.0.0.0","--port=5555","--allow-root"]
-ENTRYPOINT ["code-server"]
+ENTRYPOINT ["jupyter", "lab","--ip=0.0.0.0","--port=5555","--allow-root"]
+# ENTRYPOINT ["code-server"]
