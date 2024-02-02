@@ -1,6 +1,7 @@
 output
 qualitative_output
 quantitative_output
+celeb_output
 .ipynb_checkpoints
 logs
 __pycache__
