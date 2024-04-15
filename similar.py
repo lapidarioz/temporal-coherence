@@ -154,46 +154,110 @@ def similar_index(query_paths, search_paths, output_folder):
         print(f"Similar index for {expression_name} saved in {output_path}")
 
     
-
 def compute_similar_measures(videos_path, landmark_detector):
-    measures_similar = []
+    """
+    Computes similarity measures for a list of videos based on facial landmarks.
+
+    Args:
+        videos_path (list): A list of file paths to the videos.
+        landmark_detector (object): An object capable of detecting facial 
+                                    landmarks in images. Assumed to have a 
+                                    method 'preprocess_and_detect_landmarks_numpy' .
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing the videos paths and their 
+                          corresponding similarity measures, indexed by video_path.
+    """
+
+    measures_similar = []  # Stores computed similarity measures
+
+    # Iterate over videos with a progress bar
     for i in trange(len(videos_path), desc="Computing similar measures"):
-        video = np.load(videos_path[i])
-        landmarks = landmark_detector.preprocess_and_detect_landmarks_numpy(video[0:1])
-        measure = curve_model_s(video[0], landmarks[0])
+        video = np.load(videos_path[i])  # Load a video
+
+        # Detect landmarks for the first frame (assuming similar across frames)
+        landmarks = landmark_detector.preprocess_and_detect_landmarks_numpy(video[0:1]) 
+
+        # Calculate the similarity measure (assuming curve_model_s does this)
+        measure = curve_model_s(video[0], landmarks[0]) 
+
+        # Flatten the measure (if it's a nested structure)
         flatten_measure = tuple(chain.from_iterable(measure))
+
+        # Store the video path and its measure
         measures_similar.append({
             "video_path": videos_path[i],
-            "measure": np.array(flatten_measure)
+            "measure": np.array(flatten_measure)  # Convert to NumPy array
         })
-    measure_df = measures_similar = pd.DataFrame(measures_similar)
+
+    # Create a DataFrame to organize the results
+    measure_df = pd.DataFrame(measures_similar)
+
+    # Set 'video_path' as the index for convenient lookup
     measure_df = measure_df.set_index('video_path')
+
     return measure_df
 
-
 def compute_similar_measures_with_query(query_paths, search_paths, remove_query_subject=False):
-    similar_index_list = []
-    similar_index_expression_dict = {}
-    query_curve_measures_df = curve_measures(query_paths)
+    """
+    Generates similarity indices for query videos based on facial expressions.
+
+    For each query video and each facial expression:
+      * Compares similarity measures against videos in 'search_paths' with the same expression.
+      * Finds the most similar video based on the selected measure.
+
+    Args:
+        query_paths (list):  List of paths to the query videos.
+        search_paths (list): List of paths to search videos.
+        remove_query_subject (bool): If True, excludes videos with the same subject 
+                                     as the query video from search results.
+
+    Returns:
+        dict: A dictionary where keys are facial expression names and values are DataFrames. 
+              Each DataFrame contains 'video_path' (query video) and 
+              'similar_video_path' (most similar) columns, indexed by 'video_path'.
+    """
+
+    similar_index_expression_dict = {}  # Store indices for each expression
+
+    # Calculate similarity measures for query videos
+    query_curve_measures_df = curve_measures(query_paths)  
+
+    # Iterate over each facial expression
     for expression_name in FACIAL_EXPRESSION_NAMES:
+        similar_index_list = []  # Store results for the current expression
+
+        # Filter search videos for the current expression
         search_expression_search_paths = select_facial_expression(search_paths, expression_name)
         search_curve_measures_df = curve_measures(search_expression_search_paths)
+
+        # Iterate over query videos (with progress bar)
         for i in trange(len(query_curve_measures_df), desc=f"Generating {expression_name} similar videos index"):
             query_metric = np.array(query_curve_measures_df.iloc[i]["measure"])
             query_path = query_curve_measures_df.iloc[i]["video_path"]
+
+            # Optionally remove videos with the same subject as the query
             if remove_query_subject:
                 search_df = remove_query_subjects(search_curve_measures_df, query_path)
             else:
                 search_df = search_curve_measures_df
+
+            # Calculate similarity score against search videos
             curve_measures_array = np.array(search_df["measure"].values.tolist())
             most_curve_measures = np.sum(np.abs(curve_measures_array - query_metric), axis=1)
+
+            # Find the most similar video
             most_similar_videos_ids = np.argsort(most_curve_measures, axis=0)
             most_similar_video_path = search_df.iloc[most_similar_videos_ids[0]]["video_path"]
+
             similar_index_list.append({
                 "video_path": query_path,
                 "similar_video_path": most_similar_video_path,
             })
+
+        # Create DataFrame and add it to the results dictionary
         similar_index_df = pd.DataFrame(similar_index_list)
         similar_index_df = similar_index_df.set_index('video_path')
         similar_index_expression_dict[expression_name] = similar_index_df
+
     return similar_index_expression_dict
