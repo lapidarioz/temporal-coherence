@@ -10,6 +10,37 @@ from tensorflow_graphics.math.interpolation.slerp import interpolate
 import numpy as np
 
 
+
+# Overall Purpose: These functions provide various loss functions and calculations specifically designed to ensure smoothness and coherence in the generated videos while maintaining image quality and content.
+
+# Key Functions:
+
+# Loss Calculation Helpers:
+
+# all_pairs_distances, l1_loss, pairwise_loss: These are basic building blocks, calculating pairwise distances, L1 differences, and losses based on such pairwise comparisons.
+# mean_loss, coherence_mean_loss, coherence_mean_landmarks_loss: Calculate losses in the context of temporal coherence, ensuring consistency between frames.
+# Image and Luminance-Based Losses:
+
+# apply_luminance_loss, get_luminance: These work with the luminance channel (grayscale brightness) of images, likely to ensure consistent lighting and smooth transitions.
+# Perceptual Loss (perceptual_loss)  Employs a pre-trained VGG model to compare image features at a deeper level than pixel-wise differences. This helps retain high-level image content.
+
+# Interpolation Loss (interpolation_loss): Enforces smoothness by encouraging consistency between intermediate frames (those between the actual ground-truth targets).
+
+# Importance for Facial Expression Synthesis
+
+# Focus on Coherence: The emphasis on losses like coherence_mean_loss and calculations involving landmarks highlights your system's attention to generating smooth and natural-looking transitions between expressions.
+# Combining Cues: Utilizing luminance differences, perceptual similarity, and potentially landmark alignment promotes generating videos that are both realistic and temporally consistent.
+# Guiding Training: These specific loss functions guide the learning process of your model, helping it produce results that align with visual quality and coherence goals.
+# Design Choices:
+
+# Multiple Loss Types: The combination of losses targets different aspects of output quality, making training more comprehensive.
+# Utilizing VGG: A pre-trained image classification model (VGG) provides a powerful way to compare images based on their semantic content.
+# Focus on Intermediate States: The interpolation loss is an interesting technique to encourage realistic sequences rather than only focusing on matching target frames.
+# Potential Limitations:
+
+# Dependence on Loss Weights: The effectiveness of these losses might heavily depend on how they are weighted or combined during training.
+# Generality of VGG Features: While VGG is trained on a vast dataset, its features might not be perfectly aligned with the specific nuances of facial expressions.
+
 @tf.function
 def euclidean_distance(a, b):
     """

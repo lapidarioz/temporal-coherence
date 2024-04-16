@@ -157,6 +157,44 @@ class DlibLandmarksDetector(LandmarkDetector):
         return np.ndarray.astype(clip_landmarks, dtype=np.float32)
 
 
+# Overall Purpose:
+
+# This function calculates displacement maps between corresponding facial landmarks in consecutive frames of a video. These displacement maps describe how different areas of the face move, providing detailed information about the changes in expression.
+
+# Explanation of the Code:
+
+# Input:
+
+# points_a: Coordinates of facial landmarks in the first frame.
+# points_b: Coordinates of the corresponding landmarks in the second frame.
+# image_width, image_height: Dimensions of the video frame.
+# fill_value: Value for areas outside the convex hull of the landmarks (likely areas without tracked data).
+# Core Calculation:
+
+# Loop: The function iterates through each pair of corresponding landmarks.
+# Displacement Calculation: It computes the L2-norm (Euclidean distance) between each landmark pair, representing the magnitude of displacement for that point.
+# Interpolation: Creates LinearNDInterpolator instances to model how the displacement values change smoothly across the whole image space, not just at the landmark locations.
+# Meshgrid Creation: Sets up a grid of coordinates representing all pixels in the image.
+# Displacement Map: Applies the interpolators to the meshgrid to obtain a displacement map for each landmark pair.
+# Averaging: Calculates the average displacement across the two interpolators (one based on starting points, one on ending points).
+# Output:
+
+# Returns a NumPy array where each element is a displacement map, providing per-pixel displacement information across the entire image.
+# Importance for Facial Expression Synthesis:
+
+# Motion Analysis: Displacement maps provide a fine-grained representation of facial motion, which is crucial for understanding how expressions change over time.
+# Data for Training: These maps could be a valuable input to your model, helping it learn the patterns associated with different expressions.
+# Evaluation: Displacement maps might be used in the evaluation process to measure how accurately your model replicates realistic facial motion.
+# Design Choices:
+
+# Linear Interpolation: Assumes changes in displacement are linear between landmarks. This might be suitable for subtle expressions but less accurate for large, complex movements.
+# Averaging Interpolators: Improves the robustness of the displacement estimation.
+# Convex Hull Handling: Includes a fill_value to handle pixels outside the area where landmarks are tracked.
+# Potential Limitations:
+
+# Landmark Accuracy: The quality of the displacement maps is heavily dependent on the accuracy of your facial landmark detection.
+# Assumption of Linearity: May not fully capture complex or non-linear motion dynamics in facial expressions.
+
 def compute_displacements_interpolation(points_a, points_b, image_width, image_height, fill_value=0):
     """
     Compute the displacements interpolation between two sets of points.
