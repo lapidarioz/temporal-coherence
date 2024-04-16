@@ -16,6 +16,35 @@ from similar import compute_similar_measures, compute_similar_measures_with_quer
 
 class PreprocessedDataGenerator():
 
+# Overall Purpose:
+
+# This class acts as a flexible data preparation engine for your facial expression synthesis model. Its primary functions are:
+
+# Data Loading and Preprocessing: It handles loading video data, detecting facial landmarks, and applying deformations as necessary.
+# Batch Generation: It provides a mechanism to create batches of preprocessed data ready for feeding into the model during training or evaluation.
+# Customization: It allows for various configurations (blending, similarity search) to support different training or analysis scenarios.
+# Explanation of Key Parameters:
+
+# videos_path: The location of your video dataset.
+# generator, discriminator, *_loss_function: Components of your model architecture (if this class is used during training).
+# batch_size: Controls how many frames are grouped together in a single batch.
+# landmark_detector: A class or function responsible for detecting facial landmarks.
+# repeat: Whether to repeatedly loop through the dataset during training.
+# blend_deformation: Whether to blend deformed frames with original ones.
+# search_similar, similar_source_videos_path, expression_name: Parameters related to finding similar videos from another dataset, likely for data augmentation or targeted analysis.
+# Importance for Facial Expression Synthesis
+
+# Data Preparation: Preprocessing raw videos into a suitable format for the model is crucial. This class encapsulates that logic.
+# Adaptability: The flexibility of the class allows you to experiment with different preprocessing pipelines during training and evaluation.
+# Design Choices:
+
+# Customizable Preprocessing: The ability to include landmark detection, deformations, and similarity search highlights the emphasis on configurable data manipulation.
+# Internal State Management: The class keeps track of the current video, frame index, and generated data for seamless batch creation.
+# Potential Limitations:
+
+# Complexity: With many configuration options, the class could become harder to manage if extended further.
+# External Dependencies: It might rely on external libraries or precomputed data (e.g., for similarity search), making the setup more involved.
+
     def __init__(self,
                 videos_path,
                 generator,
@@ -87,7 +116,33 @@ class PreprocessedDataGenerator():
             self._current_source_landmarks = self.landmark_detector.preprocess_and_detect_landmarks_numpy(self._current_source_video)
         self._deform_current_video()
         self._compute_current_displacements()
-    
+
+# Overall Purpose:
+
+# These methods seem to provide the following functionalities:
+
+# Data Identification and Loading: Methods like name, path_id, current_video_relative_path, and _load_next_video help manage video loading and identification, likely for tracking or saving results.
+# Preprocessing Utilities: _first_frame, _first_landmarks, _range_current_video give basic access to components of the currently loaded video.
+# Deformation and Displacement: _deform_current_video and _compute_current_displacements are core parts of your preprocessing, preparing deformed versions of frames and possibly calculating displacements between facial landmarks.
+# Batch Management: n_first_frames a helper to create batches with repeated initial frames.
+# Explanation of Key Methods:
+
+# name, path_id, current_video_relative_path: These provide identification information, likely used for saving generated results systematically.
+# _load_next_video: Handles seamless switching to the next video in your dataset.
+# _deform_current_video: Applies your deformation logic using a deform function. Importantly, if blend_deformation is set, it blends previous, current, and next deformed frames, likely for smoother transitions.
+# _compute_current_displacements: Calls a function to calculate displacements likely based on changes in landmark positions between frames.
+# Importance for Facial Expression Synthesis
+
+# Organized Data Flow: Methods for identification and loading ensure systematic processing.
+# Preprocessing Customization: The _deform_current_video method highlights how your system prepares the input for your model.
+# Design Choices:
+
+# Video Identification: The class emphasizes tracking video origins for organized output.
+# Deformation with Blending: The inclusion of blending indicates an emphasis on temporal smoothness.
+# Displacement Calculation: Suggests the model might utilize landmark displacement information during training or evaluation.
+# Potential Limitations:
+
+# Assumes Sequential Deformation: These methods seem designed for deforming based on consecutive frames, potentially limiting more complex deformation techniques. 
     @property
     def name(self):
         return f"{self.current_video_index}_{self.current_frame_index}"
@@ -374,6 +429,34 @@ class PreprocessedDataGenerator():
             generated_frames = self.generator([self._first_batch_first_frames, self._first_batch_previous_deformed_frames, self._first_batch_deformed_frames, self._first_batch_displacements])
             self._first_previous_generated_frames = np.concatenate([self._first_batch_first_frames[0:1], generated_frames[:-1]])
             return self._first_previous_generated_frames, generated_frames, self._first_batch_frames
+    
+# Overall Purpose:
+
+# These methods focus on the core functionality of providing batches of relevant data for training or evaluation of your facial expression synthesis model. They handle video management, batch creation, and seem to support various analysis scenarios.
+
+# Key Methods:
+
+# _get_all_inputs, _get_all_inputs_deformed:  These are your primary batch creation methods. The differences between them likely highlight different modes of training or analysis, focusing on the role of deformations.
+
+# generate_* Batch Methods:
+
+# generate_next_batch: Provides standard 'current' and 'generated' frames.
+# generate_diff_batch, blended_diff_batch, get_deformed_diff_batch: Prepare batches for more nuanced analysis, focusing on differences between frames. These are likely used where temporal analysis is important.
+# generate_first_batch, generate_first_batch_deformed: These handle the initial batch of a video sequence, where you might need special treatment due to not having fully generated previous frames.
+
+# Explanation:
+
+# Batch Management: The core of these methods is assembling the required data (current frames, landmarks, deformed frames, displacements, previously generated frames) into batches while handling transitions between videos.
+# Data for Different Scenarios: The presence of multiple generate_*_batch methods indicates the flexibility of this class for providing data suitable for different training or evaluation needs.
+# Focus on Temporal Analysis: The methods for calculating differences between frames emphasize your system's attention to temporal coherence.
+# Design Choices:
+
+# Internal State: The use of class variables (e.g., self._current_video_index, self._previous_generated_frames) demonstrates how the class manages the generation process across frames and videos.
+# Multiple Input Modes: The _get_all_inputs methods suggest the generator might operate differently depending on the data provided.
+# Potential Limitations:
+
+# Complexity: With multiple data paths and generation modes, the internal logic of this class could become less straightforward to manage.
+# Assumptions about Input: Might rely on specific outputs from your deformation and displacement calculations.
     
     # TODO: only one next loss method
     def next_loss(self):
@@ -739,7 +822,35 @@ class PreprocessedDataGenerator():
             self._current_video_to_save = current_frames[split_position:]
             self._deformed_frames_to_save = deformed_frames[split_position:]
             self._blended_frames_to_save = blend_frames[split_position:]
-    
+
+ #Overall Purpose:
+
+# These methods focus on managing the saving of generated videos (generate_next_*_video methods) and on providing alternative data batches (blended_next_batch, deformed_next_batch, etc.) likely used during specialized training or analysis of your facial expression synthesis system.
+
+# Key Methods:
+
+# generate_next_*_video Methods:
+# generate_next_video: Saves original input frames and their corresponding generated frames.
+# generate_next_blended_video: Similar to the above but likely saves blended versions of the generated frames.
+# generate_diff_video: Focuses on saving the differences between frames, both for ground truth frames and generated ones.
+# Specialized Batch Creation:
+# blended_next_batch: Provides batches with blended generated frames.
+# deformed_next_batch: Provides batches where the 'target' includes deformed frames (likely the input to your generator).
+# _get_all_inputs_blended: Seems to be a helper for blended_next_batch, preparing the necessary blended data.
+# Explanation:
+
+# Video Saving: The generate_next_*_video methods collect generated results across batches and handle the transition between videos, storing them for later analysis or visualization.
+# Focus on Differences: The generate_diff_video method highlights an interest in analyzing changes between frames, important for evaluating temporal smoothness.
+# Blending for Analysis: The methods involving blend_frames suggest you're exploring how blending affects your system's output.
+# Supporting Functions: n_total_frames, and _find_similar_video likely provide utilities for data management and potentially finding similar videos from a separate dataset.
+# Design Choices:
+
+# Systematic Output Saving: Indicates a need to store generated results for later review or analysis.
+# Emphasis on Analysis Variations: The multiple data generation modes suggest your evaluation process involves comparing the effects of different techniques (blending, focusing on deformations).
+# Potential Limitations:
+
+# Storage: Saving full videos for every batch could consume significant storage space.
+
     # TODO: refactor to make only one generate video method
     def generate_next_video(self):
         previous_video_index = self.current_video_index
@@ -902,3 +1013,29 @@ class PreprocessedDataGenerator():
             current_video_path = self.videos_path[self.current_video_index]
             return self._measures_similar[self._expression_name].loc[current_video_path].values[0]
 
+# Overall Purpose:
+
+# The core function of these methods, _find_similar_video, is to locate a video within a separate dataset (either a subset of your main dataset or a distinct one) that exhibits similar characteristics to your currently processed video. This likely focuses on similarities in facial expressions or possibly overall movement dynamics.
+
+# Key Methods:
+
+# _find_similar_video: The main function responsible for the search logic. It uses precomputed similarity measures (_measures_similar) and, crucially, seems to have two modes of operation depending on whether _similar_source_videos_path is provided.
+# Explanation:
+
+# Similarity Measures: Your system seems to precompute some form of similarity representation for videos, likely based on facial landmarks or other extracted features. This is done using functions like compute_similar_measures and compute_similar_measures_with_query.
+# Search Logic: The search itself iterates through candidate videos, comparing their similarity measures to the current video. The choice is made to prioritize videos where the subjects are different, potentially to aid in data augmentation.
+# Two Modes:
+# Search within Expression Subset: If _similar_source_videos_path is None, it likely searches within a subset of your dataset selected for the desired expression (select_facial_expression).
+# Search with External Dataset: If _similar_source_videos_path is provided, it seems to use a separate dataset for finding matches, potentially allowing for greater diversity in your training or analysis data.
+# Importance for Facial Expression Synthesis:
+
+# Data Augmentation: Finding similar videos from a larger dataset could augment your training data, exposing your model to more diverse expressions and faces.
+# Targeted Analysis: This could enable analysis of how your system transfers expressions to different people or how well it handles challenging examples with similar dynamics.
+# Design Choices:
+
+# Precomputed Similarity: Calculating similarity measures upfront suggests your dataset might be large or the calculation is computationally intensive.
+# Subject Prioritization: Prioritizing different subjects hints at a desire to avoid simply replicating expressions from the same person.
+# Potential Limitations:
+
+# Similarity Metric: The effectiveness of this technique heavily depends on how well your similarity metric captures relevant aspects of facial expressions.
+# Search Space: Limiting the search to a specific expression or dataset might miss out on potentially useful examples.
