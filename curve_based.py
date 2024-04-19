@@ -120,3 +120,55 @@ def curve_model_s(image, landmarks):
     g_lower_upper_lip - g_upper_lower_lip,
     g_upper_lower_lip - g_lower_lower_lip
     )
+
+
+# Overall Purpose
+
+# The core function of this code is to extract geometric representations of key facial features from images. These representations likely serve as important inputs for your synthesis model, helping it understand the shape and movement of eyebrows, eyes, nose, lips, and the overall facial outline.
+
+# Input
+
+#     image: The facial image to be analyzed.
+#     landmarks: A set of detected facial landmarks that pinpoint the location of specific features on the face.
+
+# Output
+
+#     curve_model_s output: A set of feature vectors. Each vector encodes the geometric properties of a specific facial feature or the overall facial outline. These properties include:
+#         Normalized Start Point: Where the feature begins (relative to image size)
+#         Normalized Length: The length of the feature curve (relative to image size)
+#         Angle (phi): The orientation of the feature curve.
+#         Normalized Height and Skew: The peak height and its offset from the midpoint, capturing curvature.
+#         Curvature Parameter (k): A more complex measure of how curved the feature is.
+#         Outline Parameters: Additional scale-invariant information about the overall face shape.
+#         Feature Differences: Vectors representing the geometric relationships between adjacent features.
+
+# Breakdown of Functionality
+
+#     curve_model_variables:
+#         Calculates core geometric properties of a curve defined by a set of landmark points (e.g., length, orientation, position of highest/lowest points).
+#         Includes calculations involving trigonometric functions to determine angles and potentially transform coordinates.
+
+#     curve_model_g:
+#         Leverages curve_model_variables.
+#         Normalizes the calculated properties by image width and height, making them scale-invariant.
+
+#     curve_model_s:
+#         Extracts geometric features for a wide range of facial features (brows, eyes, nose, lips, outline) using curve_model_g.
+#         Calculates additional parameters for the facial outline.
+#         Computes differences between feature geometries, highlighting spatial relationships.
+
+# Importance for Facial Expression Synthesis
+
+#     Understanding Shape and Movement: These geometric representations provide a structured way to describe the changes in facial features that occur during different expressions.
+#     Invariance to Scale: Normalization makes your model robust to faces of different sizes.
+#     Capturing Relationships: The feature differences emphasize the interplay between features, which is crucial for realistic expression synthesis.
+
+# Design Choices
+
+#     Geometric Focus: The code heavily emphasizes geometric properties of curve-like features. This suggests your model might rely on understanding shape changes.
+#     Predefined Feature Selection: The code focuses on a fixed set of features, indicating these have been determined as the most informative for your system.
+
+# Potential Considerations
+
+#     Sensitivity to Landmark Errors: The accuracy of these geometric representations is likely dependent on the quality of your facial landmark detection.
+#     Alternative Features: You could explore incorporating other types of geometric features or even texture-based features to supplement this representation.

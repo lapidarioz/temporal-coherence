@@ -91,3 +91,37 @@ def get_frechet_inception_distance(real_images, generated_images, batch_size,
       resized_real_images, resized_generated_images, num_batches=num_batches)
 
   return fid
+
+# Overall Purpose
+
+# These functions provide tools to calculate two important metrics commonly used in GAN evaluation: Inception Score (IS) and Fréchet Inception Distance (FID). Here's the gist:
+
+#     Inception Score (IS):  Measures both the diversity and realism of generated images.  It utilizes a  pre-trained image classification network (Inception) to assess how clearly recognizable the generated examples are and whether they exhibit a good variety of classes.
+
+#     Fréchet Inception Distance (FID):  Also leverages the Inception network but focuses on comparing the distributions of real and generated images in feature space. Lower FID scores generally indicate greater similarity between the real and generated image distributions.
+
+# Functionality Breakdown
+
+#     Input Validation:  The code ensures the provided image batches have the correct dimensions and are compatible with the batch size requirements.
+
+#     Image Resizing: Both IS and FID calculations work with images of a specific size, so the code resizes the input images to conform with the Inception network's expected input.
+
+#     Invoking TF-GAN:  The code leverages the tensorflow_gan (TF-GAN) library to perform the actual Inception Score and FID calculations.  TF-GAN likely handles the complexities of interacting with the pre-trained Inception model.
+
+# Importance for Facial Expression Synthesis
+
+#     GAN Evaluation: In GAN-based facial expression synthesis, IS and FID offer valuable insights into how well your generator is doing.  High IS and low FID suggest your model is capable of producing realistic and diverse facial expressions.
+
+#     Tracking Progress: Calculating these metrics during training helps monitor improvement and  identify potential issues like mode collapse (where the generator gets stuck producing a limited variety of outputs).
+
+# Design Choices
+
+#     Reliance on TF-GAN:  Utilizing an established library streamlines the evaluation process and provides access to robust, optimized implementations of these metrics.
+
+#     Batching: The functions handle computation in batches,  likely due to memory constraints when working with image data and the Inception network.
+
+# Potential Limitations
+
+#     Computational Cost: Calculating FID, in particular, can be computationally intensive.
+
+#     Not Expression-Specific: IS and FID are general image quality metrics.  While useful, they might not perfectly capture the nuances of realistic facial expression synthesis.

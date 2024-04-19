@@ -86,3 +86,39 @@ def increase_frame_rate(frames):
         increased_frame_rate.append(current_frame)
     increased_frame_rate = tf.stack(increased_frame_rate)
     return increased_frame_rate
+
+
+# Overall Purpose: Frame Blending and Rate Adjustment
+
+# These code blocks work together to create smoother transitions within your generated videos through a combination of frame blending and increasing the effective frame rate.
+
+# blend_frames Function
+
+#     Input: Three consecutive frames: previous_frame, current_frame, and next_frame.
+#     Output: A single blended frame
+#     Process: The function calculates a weighted average of the three frames with greater emphasis on the center frame (current_frame). This creates an intermediate frame that smoothly transitions between the input frames.
+
+# increase_frame_rate Function
+
+#     Input: A sequence of video frames (frames).
+#     Output: A new sequence of frames with a higher effective frame rate and blended transitions.
+#     Process:
+#         Duplicates the initial and final frame to maintain the video's visual start and end points.
+#         Iterates over the sequence. For each triplet of consecutive frames, it calls blend_frames to generate a blended transition frame.
+#         Inserts the blended frame between each original frame, effectively doubling the frame rate and smoothing transitions.
+
+# Importance for Facial Expression Synthesis
+
+#     Temporal Coherence: Ensuring smooth visual transitions between expressions is vital for realistic video synthesis. These functions directly address this by creating blended in-between frames that reduce abrupt jumps or jarring changes.
+#     Perceptual Realism: The human visual system is sensitive to flickering or jerky motion. Increasing the frame rate and creating blended transitions contributes to a more fluid and natural-looking video output.
+
+# Design Considerations
+
+#     Blending Ratio: The specific weighting (0.5) applied to each frame influences the smoothness of the transitions. Experimentation might be needed to find the optimal values for your system.
+
+#     Computational Cost:   Increasing the frame rate and blending frames comes with additional computation.
+
+# Potential Limitations
+
+#     Motion Blur: While blending can improve smoothness, overly aggressive blending might introduce motion blur-like artifacts if there are large changes between frames.
+#     Fine-Grained Control: This method offers a relatively simple way to smooth transitions. More sophisticated interpolation techniques could potentially offer finer-grained control over the transitions.
