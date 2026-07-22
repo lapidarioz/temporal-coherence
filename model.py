@@ -138,16 +138,25 @@ def get_generator_model(img_width, img_height, n_channels):
 
     # Encoder: Downsampling Blocks
     down_stack = [
-        downsample(64, 4, apply_batchnorm=False), 
+        downsample(64, 4, apply_batchnorm=False),
         downsample(128, 4),
-        ...  # Several more downsampling blocks
+        downsample(256, 4),
+        downsample(512, 4),
+        downsample(512, 4),
+        downsample(512, 4),
+        downsample(512, 4),
+        downsample(512, 4),
     ]
 
-    # Decoder: Upsampling Blocks 
+    # Decoder: Upsampling Blocks
     up_stack = [
-        upsample(512, 4, apply_dropout=True),  
-        upsample(512, 4, apply_dropout=True), 
-        ...  # Several more upsampling blocks
+        upsample(512, 4, apply_dropout=True),
+        upsample(512, 4, apply_dropout=True),
+        upsample(512, 4, apply_dropout=True),
+        upsample(512, 4),
+        upsample(256, 4),
+        upsample(128, 4),
+        upsample(64, 4),
     ]
 
     initializer = tf.random_normal_initializer(0., 0.02)

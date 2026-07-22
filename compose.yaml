@@ -1,0 +1,21 @@
+services:
+  tensorflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.tensorflow
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    init: true
+    ports:
+      - "127.0.0.1:5555:5555"
+    volumes:
+      - type: bind
+        source: .
+        target: /home/jupyter/app
+      - type: bind
+        source: ${TEMPORAL_COHERENCE_DATA_DIR:?Set TEMPORAL_COHERENCE_DATA_DIR to your private dataset directory}
+        target: /home/jupyter/data

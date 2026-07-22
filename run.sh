@@ -1,4 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-docker compose up
-# jupyter lab --ip=0.0.0.0 --port=5555 --allow-root
+set -euo pipefail
+
+repository_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+: "${TEMPORAL_COHERENCE_DATA_DIR:?Set TEMPORAL_COHERENCE_DATA_DIR to your private dataset directory}"
+
+cd -- "$repository_dir"
+docker compose --file compose.yaml up

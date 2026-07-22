@@ -1,0 +1,10 @@
+# Dataset-free CPU validation environment for the recovered model architecture.
+# The tag documents the historical release; the digest makes the base immutable.
+FROM tensorflow/tensorflow:2.14.0rc1@sha256:bfd89366919f5490a77f0da3f53087913725cf9dc4a6a47bde86748df8c75858
+
+WORKDIR /repo
+
+COPY model.py /repo/model.py
+COPY tests /repo/tests
+
+CMD ["python", "-m", "unittest", "discover", "-s", "tests", "-p", "test_model_architecture.py", "-v"]

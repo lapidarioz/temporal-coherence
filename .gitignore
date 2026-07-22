@@ -8,3 +8,4 @@ __pycache__
 training_checkpoints
 .vscode
 docker-compose.yml
+docs/IX-1_IEEEACCESS2025.md

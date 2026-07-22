@@ -1,5 +1,0 @@
-output
-.ipynb_checkpoints
-logs
-__pycache__
-training_checkpoints

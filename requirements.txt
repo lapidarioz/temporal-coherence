@@ -1,28 +1,3 @@
-matplotlib
-pydot
-tqdm
-ipywidgets
-tensorflow-io
-tensorflow-addons
-tensorflow-probability
-tensorflow-gan
-tensorflow-hub
-tensorflow-graphics
-joblib
-opencv-python
-opencv-contrib-python
-pandas
-# scikit-video
-# scikit-image
-# scikit-learn
-# jupyterlab
-# face_recognition
-# torch
-# torchvision
-# torchaudio
-mediapipe
-# git+https://github.com/andresprados/SPIGA.git
-# git+https://github.com/FacePerceiver/facer.git@main
-imageio
-pylops
-PyWavelets
+# Compatibility entry point for the reconstructed Python 3.11 research stack.
+# See docs/environment.md before installing or changing this lock.
+-r requirements/research.lock
