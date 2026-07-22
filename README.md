@@ -12,8 +12,6 @@ The recovered generator and temporal discriminator construct successfully in the
 - no article table or metric has been reproduced from the current public-ready tree;
 - current notebooks have no stored outputs or face media.
 
-See [the environment record](docs/environment.md), [legacy split audit](docs/splits.md), and [repository assessment](docs/portfolio_review/01_repository_assessment.md) for provenance and limitations.
-
 ## Architecture validation
 
 The dataset-free CPU smoke image is pinned by immutable digest and does not download data or weights:
@@ -59,7 +57,6 @@ The code manipulates facial imagery and relies on face landmarks. Use only data 
 - `data_generator.py`: legacy preprocessing and sequence generation
 - `mug_batch.py`, `mug_vanilla.py`: legacy research training scripts
 - `tests/`: dataset-free architecture and public-artifact hygiene checks
-- `docs/portfolio_review/`: evidence-labelled audit, backlog, and approval record
 
 ## Citation and results
 
