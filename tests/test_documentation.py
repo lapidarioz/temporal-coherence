@@ -9,6 +9,7 @@ import unittest
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 MARKDOWN_LINK = re.compile(r"\[[^]]+\]\(([^)]+)\)")
+ARTICLE_DOI = "10.1109/ACCESS.2025.3612820"
 
 
 def _public_markdown_files() -> list[Path]:
@@ -39,14 +40,24 @@ class DocumentationTests(unittest.TestCase):
 
         self.assertEqual(missing, [])
 
-    def test_unapproved_doi_is_absent(self) -> None:
-        occurrences = [
-            str(document)
-            for document in _public_markdown_files()
-            if "10.1109/ACCESS" in document.read_text(encoding="utf-8")
-        ]
+    def test_article_doi_is_scoped_to_readme(self) -> None:
+        occurrences: dict[str, int] = {}
+        for document in _public_markdown_files():
+            count = document.read_text(encoding="utf-8").count(ARTICLE_DOI)
+            if count:
+                occurrences[str(document.relative_to(REPOSITORY_ROOT))] = count
 
-        self.assertEqual(occurrences, [])
+        self.assertEqual(occurrences, {"README.md": 3})
+
+    def test_no_other_ieee_access_doi_is_present(self) -> None:
+        unexpected: list[str] = []
+        for document in _public_markdown_files():
+            text = document.read_text(encoding="utf-8")
+            without_article_doi = text.replace(ARTICLE_DOI, "")
+            if "10.1109/ACCESS" in without_article_doi:
+                unexpected.append(str(document.relative_to(REPOSITORY_ROOT)))
+
+        self.assertEqual(unexpected, [])
 
 
 if __name__ == "__main__":

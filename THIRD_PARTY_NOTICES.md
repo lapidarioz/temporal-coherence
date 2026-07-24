@@ -1,6 +1,6 @@
 # Third-party notices and unresolved provenance
 
-This inventory records source evidence visible in the repository. It is not a complete dependency licence report and does not grant a project-wide software licence.
+This inventory records source evidence visible in the repository. It is not a complete dependency licence report. The root Apache License 2.0 applies to project-authored material; third-party components remain subject to their original licences and notices.
 
 ## Source-derived files
 
@@ -15,8 +15,8 @@ The broken `PWCNet` gitlink and obsolete optical-flow loss copy were removed fro
 
 ## Package dependencies
 
-`requirements/research.lock` pins a legacy Python environment but does not reproduce package licence texts or establish compatibility. Before a project licence is added, review the licences and notices of every distributed dependency and container base, including TensorFlow and its companion packages, DLib/face-recognition, MediaPipe, OpenCV, Matplotlib, SciPy, pandas, ImageIO, PyLops, and PyWavelets.
+`requirements/research.lock` pins a legacy Python environment but does not reproduce package licence texts or establish compatibility. Before redistributing dependencies or container images, review the licences and notices of every included package and base image, including TensorFlow and its companion packages, DLib/face-recognition, MediaPipe, OpenCV, Matplotlib, SciPy, pandas, ImageIO, PyLops, and PyWavelets.
 
-## Project licence status
+## Project licence
 
-Apache-2.0 is the owner's selected future project licence, but contributor, institutional, and third-party compatibility checks remain incomplete. There is intentionally no root `LICENSE` yet.
+Except where otherwise noted, project-authored material is licensed under the Apache License 2.0 in the root `LICENSE`. This licence does not replace or override third-party terms, attribution requirements, or retained file headers.

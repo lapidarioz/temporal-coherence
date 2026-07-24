@@ -1,6 +1,10 @@
-# Temporal coherence for facial video synthesis
+# Enhancing temporal coherence in facial video synthesis
 
-Research prototype for image-to-video facial-expression synthesis with explicit temporal conditioning. This repository is associated with the 2025 IEEE Access article *Enhancing Temporal Coherence in Image-to-Video Facial Expression Synthesis: A Dual-Loss Framework for Smoother Generation* by Rafael Luiz Testa, Ariane Machado-Lima, and Fátima L. S. Nunes.
+Research code accompanying the article:
+
+> Rafael Luiz Testa, Ariane Machado-Lima, and Fátima L. S. Nunes, “Enhancing Temporal Coherence in Image-to-Video Facial Expression Synthesis: A Dual-Loss Framework for Smoother Generation,” *IEEE Access*, vol. 13, pp. 170876–170894, 2025. [doi:10.1109/ACCESS.2025.3612820](https://doi.org/10.1109/ACCESS.2025.3612820)
+
+The project investigates image-to-video facial-expression synthesis with explicit temporal conditioning. The generator uses the preceding synthesized frame, together with source and landmark-derived inputs, while a temporal discriminator evaluates consecutive frames and their difference.
 
 ## Current status
 
@@ -58,14 +62,28 @@ The code manipulates facial imagery and relies on face landmarks. Use only data 
 - `mug_batch.py`, `mug_vanilla.py`: legacy research training scripts
 - `tests/`: dataset-free architecture and public-artifact hygiene checks
 
-## Citation and results
+## Citation
 
-The associated article may be cited by title, authors, journal, and year as given above. This repository intentionally includes no DOI, BibTeX block, article file, unapproved result summary, or reproduction claim.
+If this code supports your research, cite the associated article:
 
-## Licence status
+```bibtex
+@article{testa2025enhancing,
+  author  = {Testa, Rafael Luiz and Machado-Lima, Ariane and Nunes, Fátima L. S.},
+  title   = {Enhancing Temporal Coherence in Image-to-Video Facial Expression Synthesis: A Dual-Loss Framework for Smoother Generation},
+  journal = {IEEE Access},
+  year    = {2025},
+  volume  = {13},
+  pages   = {170876--170894},
+  doi     = {10.1109/ACCESS.2025.3612820}
+}
+```
 
-No project-wide software licence is currently granted. The article's Creative Commons licence does not automatically apply to this code. A root `LICENSE` will be added only after contributor, institutional, and third-party compatibility review. Existing third-party file headers remain in force; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The article reports the complete experimental study and results. The current repository does not include the datasets, trained weights, participant material, or a verified end-to-end reproduction of those results.
 
-## Publication warning
+## Licence
 
-The cleaned working tree contains no stored notebook outputs or detected credential leak, but earlier Git commits retain large notebook-output blobs and a deleted code-server password verifier. Do not publish the existing Git history until a history-safe release decision is completed.
+Except where otherwise noted, project-authored material is licensed under the [Apache License 2.0](LICENSE). The article's Creative Commons licence is separate and does not govern this repository. Third-party components remain subject to their original licences and notices; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Release status
+
+The current tree contains no datasets, face media, participant material, model weights, checkpoints, or stored notebook outputs. However, the reachable `main` history still contains the previously identified output-bearing notebook blobs and deleted code-server password verifier, so this history is not yet suitable for public release. This history status is separate from the software-licensing and scientific-reproduction limitations above.
